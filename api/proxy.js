@@ -1,7 +1,29 @@
 /**
- * Vercel bridge: GET/POST /aperture/* → AGENT_BASE_URL/aperture/*
- * Invoked as /api/proxy?p=<rest> (see vercel.json rewrite). Flat file avoids nested [...] route 404s.
+ * Vercel bridge: /aperture/api/* → AGENT_BASE_URL/aperture/api/*
+ * Query: ?p=api/<rest> (see vercel.json). POST: Vercel often omits req.body — read raw stream when needed.
  */
+
+function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+async function getBodyForUpstream(req) {
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    return undefined;
+  }
+  if (req.body != null) {
+    if (Buffer.isBuffer(req.body)) return req.body.toString('utf8');
+    if (typeof req.body === 'string') return req.body;
+    if (typeof req.body === 'object') return JSON.stringify(req.body);
+  }
+  const raw = await readRawBody(req);
+  return raw && raw.length > 0 ? raw : '{}';
+}
 
 export default async function handler(req, res) {
   const base = process.env.AGENT_BASE_URL?.replace(/\/$/, '');
@@ -23,15 +45,19 @@ export default async function handler(req, res) {
   const q = usp.toString();
   const target = `${base}/aperture/${p}${q ? `?${q}` : ''}`;
 
+  const body = await getBodyForUpstream(req);
+
+  /** @type {RequestInit} */
   const init = {
     method: req.method,
-    headers: {},
+    headers: {
+      Accept: req.headers.accept || 'application/json',
+    },
   };
 
   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
-    const ct = req.headers['content-type'] || 'application/json';
-    init.headers['Content-Type'] = ct;
-    init.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {});
+    init.headers['Content-Type'] = req.headers['content-type'] || 'application/json';
+    init.body = body;
   }
 
   let upstream;
@@ -46,8 +72,9 @@ export default async function handler(req, res) {
   }
 
   const ct = upstream.headers.get('content-type') || 'application/json; charset=utf-8';
-  const body = Buffer.from(await upstream.arrayBuffer());
+  const buf = Buffer.from(await upstream.arrayBuffer());
   res.status(upstream.status);
   res.setHeader('Content-Type', ct);
-  res.send(body);
+  res.setHeader('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+  res.send(buf);
 }

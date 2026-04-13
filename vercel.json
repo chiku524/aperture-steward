@@ -6,6 +6,14 @@
     { "source": "/", "destination": "/index.html" },
     { "source": "/aperture/steward", "destination": "/steward.html" },
     { "source": "/aperture/steward/", "destination": "/steward.html" },
-    { "source": "/aperture/(.*)", "destination": "/api/proxy?p=$1" }
+    { "source": "/aperture/api/(.*)", "destination": "/api/proxy?p=api/$1" }
+  ],
+  "headers": [
+    {
+      "source": "/aperture/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "private, no-store, max-age=0, must-revalidate" }
+      ]
+    }
   ]
 }

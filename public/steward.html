@@ -312,7 +312,7 @@
 
       async function loadMeta() {
         try {
-          const r = await fetch(STEWARD_BASE + '/api/steward/meta');
+          const r = await fetch(STEWARD_BASE + '/api/steward/meta', { cache: 'no-store' });
           if (!r.ok) return;
           const j = await r.json();
           chatTimeoutMs = (j.limits && j.limits.chatTimeoutMs ? Number(j.limits.chatTimeoutMs) : 120000) + 5000;
@@ -335,7 +335,7 @@
       }
 
       async function refreshArtifacts() {
-        const r = await fetch(STEWARD_BASE + '/api/steward/artifacts');
+        const r = await fetch(STEWARD_BASE + '/api/steward/artifacts', { cache: 'no-store' });
         const j = await r.json();
         list.innerHTML = '';
         (j.items || []).forEach((it) => {
@@ -352,7 +352,7 @@
 
       async function refreshTrace() {
         try {
-          const r = await fetch(STEWARD_BASE + '/api/steward/trace?limit=40');
+          const r = await fetch(STEWARD_BASE + '/api/steward/trace?limit=40', { cache: 'no-store' });
           const j = await r.json();
           const lines = j.lines || [];
           const hdr = j.truncated ? '(tail truncated to save bandwidth)\n\n' : '';
@@ -377,9 +377,10 @@
         try {
           const r = await fetch(STEWARD_BASE + '/api/steward/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({ message: text }),
             signal: ac.signal,
+            cache: 'no-store',
           });
           const j = await r.json().catch(() => ({}));
           if (!r.ok) {
