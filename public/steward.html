@@ -313,8 +313,21 @@
       async function loadMeta() {
         try {
           const r = await fetch(STEWARD_BASE + '/api/steward/meta', { cache: 'no-store' });
-          if (!r.ok) return;
-          const j = await r.json();
+          let j = {};
+          try {
+            j = await r.json();
+          } catch {
+            j = {};
+          }
+          if (!r.ok) {
+            status.innerHTML = '';
+            const p = document.createElement('span');
+            p.className = 'pill';
+            p.style.borderColor = 'var(--warn)';
+            p.textContent = String(j.detail || j.error || r.statusText || 'meta failed').slice(0, 220);
+            status.appendChild(p);
+            return;
+          }
           chatTimeoutMs = (j.limits && j.limits.chatTimeoutMs ? Number(j.limits.chatTimeoutMs) : 120000) + 5000;
           status.innerHTML = '';
           const pills = [
@@ -335,9 +348,25 @@
       }
 
       async function refreshArtifacts() {
-        const r = await fetch(STEWARD_BASE + '/api/steward/artifacts', { cache: 'no-store' });
-        const j = await r.json();
+        let r;
+        let j = {};
+        try {
+          r = await fetch(STEWARD_BASE + '/api/steward/artifacts', { cache: 'no-store' });
+          j = await r.json();
+        } catch (e) {
+          list.innerHTML = '';
+          const li = document.createElement('li');
+          li.textContent = 'Artifacts: ' + (e && e.message ? e.message : String(e));
+          list.appendChild(li);
+          return;
+        }
         list.innerHTML = '';
+        if (!r.ok) {
+          const li = document.createElement('li');
+          li.textContent = String(j.detail || j.error || r.statusText || 'artifacts request failed');
+          list.appendChild(li);
+          return;
+        }
         (j.items || []).forEach((it) => {
           const li = document.createElement('li');
           li.textContent = it.parseError ? it.name + ' (parse error)' : it.name;
@@ -389,7 +418,7 @@
                 ? 'Message too large for steward limits.'
                 : r.status === 504
                   ? 'Upstream model call timed out.'
-                  : j.error || r.statusText;
+                  : j.detail || j.error || r.statusText;
             throw new Error(hint);
           }
           bubble('agent', j.reply || '(empty)');

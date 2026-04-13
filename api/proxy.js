@@ -32,6 +32,23 @@ export default async function handler(req, res) {
     return;
   }
 
+  if (process.env.VERCEL_URL) {
+    try {
+      const agent = new URL(base.includes('://') ? base : `https://${base}`);
+      const deployment = new URL(`https://${process.env.VERCEL_URL}`);
+      if (agent.hostname === deployment.hostname) {
+        res.status(400).json({
+          error: 'agent_base_url_same_as_vercel',
+          detail:
+            'AGENT_BASE_URL must be your Nosana (or other) agent origin, not this Vercel hostname. The bridge cannot call into the same static deployment for JSON APIs.',
+        });
+        return;
+      }
+    } catch {
+      /* ignore invalid AGENT_BASE_URL here; fetch will fail later */
+    }
+  }
+
   const url = new URL(req.url, 'http://localhost');
   let p = url.searchParams.get('p') || '';
   p = p.replace(/^\/+/, '').replace(/\/+$/, '');
@@ -73,6 +90,21 @@ export default async function handler(req, res) {
 
   const ct = upstream.headers.get('content-type') || 'application/json; charset=utf-8';
   const buf = Buffer.from(await upstream.arrayBuffer());
+
+  /** Steward JSON routes must not come back as the Eliza client SPA (common AGENT_BASE_URL misconfig). */
+  const stewardApi = p.startsWith('api/steward');
+  if (stewardApi && /text\/html/i.test(ct)) {
+    res.status(502);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+    res.json({
+      error: 'upstream_returned_html',
+      detail:
+        'AGENT_BASE_URL reached an Eliza server that served HTML (usually the stock ElizaOS client) for /aperture/api/steward/*. Point AGENT_BASE_URL at the Nosana (or local) process running this repository’s agent with the aperture plugin, then confirm JSON from GET /aperture/api/steward/health on that origin.',
+    });
+    return;
+  }
+
   res.status(upstream.status);
   res.setHeader('Content-Type', ct);
   res.setHeader('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
