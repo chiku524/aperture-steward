@@ -90,3 +90,4 @@ The wizard merges answers into **`.env`** (gitignored), can run **`pnpm run veri
 | Checking **`/steward`** or **`/api/steward/health`** | ElizaOS mounts this plugin under **`/aperture`** — use **`/aperture/steward`** and **`/aperture/api/steward/health`**. |
 | Image is private | Docker Hub repo must be **public** so Nosana can pull. |
 | `yourusername/...` still in JSON | Replace with your real Docker Hub name before deploy. |
+| “Incorrect API key provided: nosana” | Eliza **`@elizaos/plugin-openai` uses `OPENAI_BASE_URL`** for chat (not `OPENAI_API_URL`). Set **`OPENAI_BASE_URL`** to the Nosana **`…/v1`** URL and **`OPENAI_API_KEY=nosana`** on the **agent** (Nosana env or `.env`), then restart. |

@@ -34,7 +34,7 @@ Use this checklist against the official requirements (deadline **April 14, 2026*
 - [ ] **Local secrets** — `pnpm run setup:creds` (writes **`.env`**, optional verify + Nosana list + Vercel env upsert); or copy [`.env.example`](./.env.example) manually.
 - [ ] **Vercel (optional but recommended)** — connect this repo, set **`AGENT_BASE_URL`** to your Nosana job origin (no trailing slash), redeploy. **`buildCommand`** copies `public/index.html` and `public/steward.html` to the deployment root so **`/`** and **`/aperture/steward`** can rewrite to real static files; other **`/aperture/*`** paths use **`/api/proxy?p=…`**. Do **not** set `outputDirectory: "public"` or `/api/*` will 404. Optional **`REPO_URL`** overrides the landing page GitHub link.
   - **Demo script (video <60s):** open **`/aperture/steward`** → send a planning prompt → trigger a digest with “record a decision digest …” → show artifacts updating → hit **`/aperture/api/steward/health`** in a second tab (on Nosana directly, or on Vercel after `AGENT_BASE_URL` is set).
-  - **Inference keys:** steward chat runs **on the Nosana agent** (or your local `elizaos start`), not inside Vercel. Setting **`OPENAI_API_KEY` / `OPENAI_API_URL` on Vercel does not change model calls.** On the agent, set **`OPENAI_API_URL`** to the Nosana Qwen endpoint and **`OPENAI_API_KEY=nosana`** (literal placeholder Nosana expects). If **`OPENAI_API_URL` is missing**, the OpenAI plugin talks to **api.openai.com** and you get: *Incorrect API key provided: nosana*.
+  - **Inference keys:** steward chat runs **on the Nosana agent** (or your local `elizaos start`), not inside Vercel. Setting **`OPENAI_*` on Vercel does not change model calls.** On the agent, **`@elizaos/plugin-openai` reads `OPENAI_BASE_URL`** for chat (set to the Nosana Qwen URL with **`/v1`**) and **`OPENAI_API_KEY=nosana`**. The old name **`OPENAI_API_URL` is ignored** by this plugin. If **`OPENAI_BASE_URL` is missing**, traffic goes to **api.openai.com** and you get: *Incorrect API key provided: nosana*.
 - [ ] **Video demo (<1 minute)** showing the UI and one artifact write.
 - [ ] **Social post** + **stars** on `agent-challenge`, `nosana-programs`, `nosana-kit`, `nosana-cli`.
 
@@ -152,7 +152,7 @@ Nosana provides a hosted **Qwen3.5-27B-AWQ-4bit** endpoint for challenge partici
 
 ```env
 OPENAI_API_KEY=nosana
-OPENAI_API_URL=https://6vq2bcqphcansrs9b88ztxfs88oqy7etah2ugudytv2x.node.k8s.prd.nos.ci/v1
+OPENAI_BASE_URL=https://6vq2bcqphcansrs9b88ztxfs88oqy7etah2ugudytv2x.node.k8s.prd.nos.ci/v1
 MODEL_NAME=Qwen3.5-27B-AWQ-4bit
 ```
 
@@ -171,7 +171,7 @@ ollama serve
 
 ```env
 OPENAI_API_KEY=ollama
-OPENAI_API_URL=http://127.0.0.1:11434/v1
+OPENAI_BASE_URL=http://127.0.0.1:11434/v1
 MODEL_NAME=qwen3.5:27b
 ```
 

@@ -28,7 +28,8 @@ const DRY = process.argv.includes('--dry-run');
 
 const DEFAULTS = {
   OPENAI_API_KEY: 'nosana',
-  OPENAI_API_URL: 'https://6vq2bcqphcansrs9b88ztxfs88oqy7etah2ugudytv2x.node.k8s.prd.nos.ci/v1',
+  /** Eliza `@elizaos/plugin-openai` reads this for chat — not `OPENAI_API_URL`. */
+  OPENAI_BASE_URL: 'https://6vq2bcqphcansrs9b88ztxfs88oqy7etah2ugudytv2x.node.k8s.prd.nos.ci/v1',
   OPENAI_EMBEDDING_URL: 'https://4yiccatpyxx773jtewo5ccwhw1s2hezq5pehndb6fcfq.node.k8s.prd.nos.ci/v1',
   OPENAI_EMBEDDING_API_KEY: 'nosana',
   OPENAI_EMBEDDING_MODEL: 'Qwen3-Embedding-0.6B',
@@ -72,7 +73,7 @@ function buildEnvFile(merged) {
     '',
     '# LLM',
     `OPENAI_API_KEY=${quoteVal(merged.OPENAI_API_KEY)}`,
-    `OPENAI_API_URL=${quoteVal(merged.OPENAI_API_URL)}`,
+    `OPENAI_BASE_URL=${quoteVal(merged.OPENAI_BASE_URL)}`,
     `MODEL_NAME=${quoteVal(merged.MODEL_NAME)}`,
     '',
     '# Embeddings',
@@ -243,7 +244,7 @@ async function main() {
   console.log('\nAperture Steward — credential setup');
   console.log('─'.repeat(50));
   console.log('Inference profile:');
-  console.log('  1) Nosana hosted Qwen (OPENAI_API_KEY=nosana + Nosana OPENAI_API_URL)');
+  console.log('  1) Nosana hosted Qwen (OPENAI_API_KEY=nosana + Nosana OPENAI_BASE_URL)');
   console.log('  2) OpenAI platform (your sk-… key + https://api.openai.com/v1)');
   console.log('  3) Keep existing .env LLM fields (only change what you re-enter below)');
   const profile = (await rl.question('Choose [1/2/3] (default 1): ')).trim() || '1';
@@ -251,6 +252,9 @@ async function main() {
   /** Existing keys win over baked-in defaults. */
   /** @type {Record<string, string>} */
   const merged = { ...DEFAULTS, ...existing };
+  if (!merged.OPENAI_BASE_URL && merged.OPENAI_API_URL) {
+    merged.OPENAI_BASE_URL = merged.OPENAI_API_URL;
+  }
 
   if (profile === '2') {
     merged.OPENAI_API_KEY = await questionSecret(rl, 'OpenAI API key (sk-…)');
@@ -258,21 +262,21 @@ async function main() {
       console.error('OpenAI profile requires a key. Aborting.');
       process.exit(1);
     }
-    merged.OPENAI_API_URL = await question(rl, 'OpenAI base URL', 'https://api.openai.com/v1');
+    merged.OPENAI_BASE_URL = await question(rl, 'OpenAI base URL', 'https://api.openai.com/v1');
     merged.MODEL_NAME = await question(rl, 'Chat model name', merged.MODEL_NAME || 'gpt-4o-mini');
     const emb = (await rl.question('Use same OpenAI key for embeddings? [Y/n]: ')).trim().toLowerCase();
     if (emb !== 'n') {
-      merged.OPENAI_EMBEDDING_URL = merged.OPENAI_API_URL;
+      merged.OPENAI_EMBEDDING_URL = merged.OPENAI_BASE_URL;
       merged.OPENAI_EMBEDDING_API_KEY = merged.OPENAI_API_KEY;
     } else {
       merged.OPENAI_EMBEDDING_API_KEY = await questionSecret(rl, 'Embedding API key');
-      merged.OPENAI_EMBEDDING_URL = await question(rl, 'Embedding base URL', merged.OPENAI_API_URL);
+      merged.OPENAI_EMBEDDING_URL = await question(rl, 'Embedding base URL', merged.OPENAI_BASE_URL);
     }
   } else if (profile === '3') {
     console.log('Keeping LLM-related keys from existing .env / defaults.');
   } else {
     merged.OPENAI_API_KEY = 'nosana';
-    merged.OPENAI_API_URL = await question(rl, 'Nosana OPENAI_API_URL', merged.OPENAI_API_URL);
+    merged.OPENAI_BASE_URL = await question(rl, 'Nosana OPENAI_BASE_URL', merged.OPENAI_BASE_URL);
     const embSame = (await rl.question('Use default Nosana embedding URL + nosana key? [Y/n]: ')).trim().toLowerCase();
     if (embSame === 'n') {
       merged.OPENAI_EMBEDDING_URL = await question(rl, 'OPENAI_EMBEDDING_URL', merged.OPENAI_EMBEDDING_URL);
