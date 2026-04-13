@@ -11,7 +11,8 @@
     "start": "elizaos start",
     "dev": "elizaos dev",
     "verify:deploy": "node scripts/verify-endpoints.mjs",
-    "nosana:deployments": "node scripts/nosana-deployment.mjs"
+    "nosana:deployments": "node scripts/nosana-deployment.mjs",
+    "setup:creds": "node scripts/setup-credentials.mjs"
   },
   "dependencies": {
     "@elizaos/core": "^1.0.0",

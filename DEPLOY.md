@@ -53,6 +53,18 @@ You want **`/aperture/api/steward/health`** → JSON with `"status":"ok"` (or `"
 
 ---
 
+## 3b. Scripted `.env` + optional Vercel push (optional)
+
+From the repo root:
+
+```bash
+pnpm run setup:creds
+```
+
+The wizard merges answers into **`.env`** (gitignored), can run **`pnpm run verify:deploy`** against your Nosana URL, **`pnpm run nosana:deployments list`** if you enter `NOSANA_API_KEY`, and optionally **upserts `AGENT_BASE_URL` / `REPO_URL` on Vercel** using a **`VERCEL_TOKEN`** and **`VERCEL_PROJECT_ID`** (see [Vercel token docs](https://vercel.com/docs/rest-api#authentication)). Use **`pnpm run setup:creds -- --dry-run`** to preview without writing. Never commit secrets.
+
+---
+
 ## 4. Vercel (optional front door)
 
 1. Connect this GitHub repo to Vercel (root of repo).
