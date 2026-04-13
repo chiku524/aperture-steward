@@ -10,7 +10,8 @@
     "build": "tsc --project tsconfig.json",
     "start": "elizaos start",
     "dev": "elizaos dev",
-    "verify:deploy": "node scripts/verify-endpoints.mjs"
+    "verify:deploy": "node scripts/verify-endpoints.mjs",
+    "nosana:deployments": "node scripts/nosana-deployment.mjs"
   },
   "dependencies": {
     "@elizaos/core": "^1.0.0",

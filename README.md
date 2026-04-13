@@ -339,6 +339,17 @@ nosana job status <job-id>
 nosana job logs <job-id>
 ```
 
+**Dashboard “deployments” (start / stop / restart via API):** if you created a long-running deployment in the Nosana Deploy UI and there is no obvious Restart button, you can use the same API key with the [Nosana HTTP API](https://learn.nosana.com/api/intro.html). This repo includes a small helper (no extra packages):
+
+```bash
+export NOSANA_API_KEY="nos_..."   # from deploy.nosana.com → Account → API Keys
+
+pnpm run nosana:deployments list
+pnpm run nosana:deployments restart "<deployment-id>" --wait
+```
+
+Use `status`, `stop`, and `start` the same way. To push a new job definition JSON (for example after changing the Docker `image` field), use `revision "<id>" --file nos_job_def/nosana_eliza_job_definition.json`, then `restart` with `--wait` so nodes pick up the new revision.
+
 **CLI Flags Explained:**
 - `--file` — Path to your job definition JSON
 - `--market` — Which GPU market to use (nvidia-3090, nvidia-rtx-4090, etc.)
