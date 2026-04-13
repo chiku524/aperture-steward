@@ -26,12 +26,20 @@ RUN pnpm install --frozen-lockfile
 # Copy all source files
 COPY . .
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data
+# Compile TypeScript (dist/ is not copied from the host context)
+RUN pnpm build
+
+# Create data directory for SQLite + steward artifacts
+RUN mkdir -p /app/data && chown -R node:node /app
 
 EXPOSE 3000
 
 ENV NODE_ENV=production
 ENV SERVER_PORT=3000
+
+USER node
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.SERVER_PORT||3000)+'/api/steward/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["pnpm", "start"]

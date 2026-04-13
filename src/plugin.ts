@@ -14,11 +14,51 @@ import {
   type MessagePayload,
   logger,
 } from '@elizaos/core';
-import { mkdirSync, appendFileSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import {
+  appendFileSync,
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from 'fs';
 import { join } from 'path';
 
 const ARTIFACTS_DIR = join(process.cwd(), 'data', 'artifacts');
 const TRACE_PATH = join(process.cwd(), 'data', 'sovereignty-trace.ndjson');
+const PROCESS_STARTED_AT = Date.now();
+
+const DEFAULT_MAX_MESSAGE_CHARS = 12_000;
+const DEFAULT_CHAT_TIMEOUT_MS = 120_000;
+const DEFAULT_TRACE_TAIL = 80;
+const DEFAULT_TRACE_MAX_BYTES = 512 * 1024;
+
+function envInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function maxMessageChars(): number {
+  return envInt('STEWARD_MAX_MESSAGE_CHARS', DEFAULT_MAX_MESSAGE_CHARS);
+}
+
+function chatTimeoutMs(): number {
+  return envInt('STEWARD_CHAT_TIMEOUT_MS', DEFAULT_CHAT_TIMEOUT_MS);
+}
+
+function attentionBudget(): string {
+  return process.env.ATTENTION_BUDGET_LEVEL ?? 'normal';
+}
+
+function sovereigntyMode(): string {
+  return process.env.SOVEREIGNTY_MODE ?? 'strict';
+}
 
 function ensureDataDirs(): void {
   mkdirSync(ARTIFACTS_DIR, { recursive: true });
@@ -34,6 +74,63 @@ function readUiHtml(): string {
   }
 }
 
+function clampInt(value: unknown, min: number, max: number, fallback: number): number {
+  const n = typeof value === 'string' ? Number.parseInt(value, 10) : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(n)));
+}
+
+function readTraceTailLines(limit: number, maxBytes: number): { lines: unknown[]; truncated: boolean } {
+  if (!existsSync(TRACE_PATH)) {
+    return { lines: [], truncated: false };
+  }
+  try {
+    const size = statSync(TRACE_PATH).size;
+    let raw: string;
+    let truncated = false;
+    if (size > maxBytes) {
+      const buf = Buffer.alloc(maxBytes);
+      const handle = openSync(TRACE_PATH, 'r');
+      try {
+        readSync(handle, buf, 0, maxBytes, size - maxBytes);
+      } finally {
+        closeSync(handle);
+      }
+      raw = buf.toString('utf-8');
+      const firstNl = raw.indexOf('\n');
+      raw = firstNl === -1 ? raw : raw.slice(firstNl + 1);
+      truncated = true;
+    } else {
+      raw = readFileSync(TRACE_PATH, 'utf-8');
+    }
+    const all = raw.split('\n').filter((l) => l.trim().length > 0);
+    const slice = all.slice(-limit);
+    const lines = slice.map((line) => {
+      try {
+        return JSON.parse(line) as unknown;
+      } catch {
+        return { raw: line, parseError: true };
+      }
+    });
+    return { lines, truncated };
+  } catch (e) {
+    logger.warn({ err: e }, 'steward trace read failed');
+    return { lines: [], truncated: false };
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 const stewardProvider: Provider = {
   name: 'APERTURE_CONTEXT',
   description:
@@ -44,8 +141,8 @@ const stewardProvider: Provider = {
     _message: Memory,
     _state: State | undefined
   ): Promise<ProviderResult> => {
-    const budget = process.env.ATTENTION_BUDGET_LEVEL ?? 'normal';
-    const mode = process.env.SOVEREIGNTY_MODE ?? 'strict';
+    const budget = attentionBudget();
+    const mode = sovereigntyMode();
     let recent = '';
     try {
       ensureDataDirs();
@@ -110,6 +207,8 @@ const recordDigestAction: Action = {
       recordedAt: new Date().toISOString(),
       sourceText: message.content.text,
       agentId: runtime.agentId,
+      attentionBudget: attentionBudget(),
+      sovereigntyMode: sovereigntyMode(),
     };
     writeFileSync(file, JSON.stringify(payload, null, 2), 'utf-8');
     const msg = `Recorded decision digest to ${file} (local sovereign ledger).`;
@@ -142,7 +241,7 @@ export const apertureStewardPlugin: Plugin = {
           });
           appendFileSync(TRACE_PATH, `${line}\n`, 'utf-8');
         } catch (e) {
-          logger.debug({ err: e }, 'steward trace append skipped');
+          logger.warn({ err: e }, 'steward trace append skipped');
         }
       },
     ],
@@ -156,7 +255,75 @@ export const apertureStewardPlugin: Plugin = {
       public: true,
       handler: async (_req: RouteRequest, res: RouteResponse) => {
         res.setHeader?.('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader?.('X-Frame-Options', 'DENY');
+        res.setHeader?.('Referrer-Policy', 'no-referrer');
         res.send(readUiHtml());
+      },
+    },
+    {
+      name: 'steward-health',
+      path: '/api/steward/health',
+      type: 'GET',
+      public: true,
+      handler: async (_req: RouteRequest, res: RouteResponse, runtime: IAgentRuntime) => {
+        try {
+          const ready = await runtime.isReady();
+          res.json({
+            status: 'ok',
+            service: 'aperture-steward',
+            ready,
+            uptimeSec: Math.round(process.uptime()),
+            startedAtMs: PROCESS_STARTED_AT,
+            port: process.env.SERVER_PORT ?? '3000',
+            nodeEnv: process.env.NODE_ENV ?? 'development',
+          });
+        } catch (e) {
+          res.status(503).json({
+            status: 'degraded',
+            error: e instanceof Error ? e.message : 'health check failed',
+          });
+        }
+      },
+    },
+    {
+      name: 'steward-meta',
+      path: '/api/steward/meta',
+      type: 'GET',
+      public: true,
+      handler: async (_req: RouteRequest, res: RouteResponse, runtime: IAgentRuntime) => {
+        res.json({
+          agentName: runtime.character.name,
+          attentionBudget: attentionBudget(),
+          sovereigntyMode: sovereigntyMode(),
+          limits: {
+            maxMessageChars: maxMessageChars(),
+            chatTimeoutMs: chatTimeoutMs(),
+          },
+          paths: {
+            stewardUi: '/steward',
+            chat: '/api/steward/chat',
+            artifacts: '/api/steward/artifacts',
+            trace: '/api/steward/trace',
+          },
+        });
+      },
+    },
+    {
+      name: 'steward-trace',
+      path: '/api/steward/trace',
+      type: 'GET',
+      public: true,
+      handler: async (req: RouteRequest, res: RouteResponse) => {
+        try {
+          ensureDataDirs();
+          const limit = clampInt(req.query?.limit, 1, 200, DEFAULT_TRACE_TAIL);
+          const maxBytes = clampInt(req.query?.maxBytes, 4096, 2 * 1024 * 1024, DEFAULT_TRACE_MAX_BYTES);
+          const { lines, truncated } = readTraceTailLines(limit, maxBytes);
+          res.json({ lines, truncated, limit, maxBytes });
+        } catch (e) {
+          logger.error({ e }, 'steward trace list failed');
+          res.status(500).json({ error: e instanceof Error ? e.message : 'trace failed' });
+        }
       },
     },
     {
@@ -172,13 +339,21 @@ export const apertureStewardPlugin: Plugin = {
             res.status(400).json({ error: 'message required' });
             return;
           }
-          const { text: reply } = await runtime.generateText(text, {
+          const maxChars = maxMessageChars();
+          if (text.length > maxChars) {
+            res.status(413).json({ error: `message exceeds max length (${maxChars} chars)` });
+            return;
+          }
+          const generate = runtime.generateText(text, {
             includeCharacter: true,
           });
+          const { text: reply } = await withTimeout(generate, chatTimeoutMs(), 'steward chat');
           res.json({ reply });
         } catch (e) {
           logger.error({ e }, 'steward chat failed');
-          res.status(500).json({ error: e instanceof Error ? e.message : 'chat failed' });
+          const message = e instanceof Error ? e.message : 'chat failed';
+          const status = /timed out/i.test(message) ? 504 : 500;
+          res.status(status).json({ error: message });
         }
       },
     },
@@ -195,12 +370,21 @@ export const apertureStewardPlugin: Plugin = {
             .sort()
             .reverse()
             .slice(0, 40)
-            .map((name: string) => ({
-              name,
-              content: JSON.parse(readFileSync(join(ARTIFACTS_DIR, name), 'utf-8')) as unknown,
-            }));
+            .map((name: string) => {
+              try {
+                const raw = readFileSync(join(ARTIFACTS_DIR, name), 'utf-8');
+                return { name, content: JSON.parse(raw) as unknown };
+              } catch (e) {
+                return {
+                  name,
+                  parseError: true,
+                  error: e instanceof Error ? e.message : 'read failed',
+                };
+              }
+            });
           res.json({ items });
-        } catch {
+        } catch (e) {
+          logger.warn({ err: e }, 'steward artifacts list failed');
           res.json({ items: [] });
         }
       },

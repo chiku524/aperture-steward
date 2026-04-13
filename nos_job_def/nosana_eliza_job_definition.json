@@ -1,10 +1,29 @@
 {
+  "version": "0.1",
+  "type": "container",
+  "meta": {
+    "trigger": "cli"
+  },
   "ops": [
     {
+      "type": "container/create-volume",
+      "id": "steward-data",
+      "args": {
+        "name": "aperture-steward-data"
+      }
+    },
+    {
+      "type": "container/run",
       "id": "agent",
       "args": {
         "image": "yourusername/aperture-steward-agent:latest",
         "expose": 3000,
+        "volumes": [
+          {
+            "name": "aperture-steward-data",
+            "dest": "/app/data"
+          }
+        ],
         "env": {
           "OPENAI_API_KEY": "nosana",
           "OPENAI_API_URL": "https://6vq2bcqphcansrs9b88ztxfs88oqy7etah2ugudytv2x.node.k8s.prd.nos.ci/v1",
@@ -21,9 +40,7 @@
       },
       "execution": {
         "group": "run"
-      },
-      "type": "container/run"
+      }
     }
-  ],
-  "version": "0.1"
+  ]
 }

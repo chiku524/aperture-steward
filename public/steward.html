@@ -68,6 +68,12 @@
         color: var(--muted);
         font-family: 'IBM Plex Mono', monospace;
       }
+      .status-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
       .grid {
         display: grid;
         grid-template-columns: 1fr 320px;
@@ -121,6 +127,7 @@
         display: flex;
         gap: 0.5rem;
         margin-top: 0.85rem;
+        align-items: flex-end;
       }
       textarea {
         flex: 1;
@@ -142,21 +149,33 @@
         border: none;
         border-radius: 10px;
         padding: 0 1.1rem;
+        height: 44px;
         font-weight: 600;
         font-family: inherit;
         cursor: pointer;
         background: var(--accent);
         color: #042f2e;
       }
+      button.secondary {
+        background: #111c2a;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
       button:disabled {
         opacity: 0.55;
         cursor: wait;
+      }
+      .thinking {
+        font-size: 0.78rem;
+        color: var(--muted);
+        min-height: 1.2rem;
+        margin-top: 0.35rem;
       }
       .artifact-list {
         list-style: none;
         margin: 0;
         padding: 0;
-        max-height: 360px;
+        max-height: 220px;
         overflow-y: auto;
         font-family: 'IBM Plex Mono', monospace;
         font-size: 0.72rem;
@@ -181,6 +200,21 @@
         color: #cbd5e1;
         border: 1px solid var(--border);
       }
+      .trace {
+        margin-top: 0.75rem;
+        max-height: 180px;
+        overflow: auto;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.68rem;
+        color: var(--muted);
+        border-top: 1px solid #1a2433;
+        padding-top: 0.5rem;
+      }
+      .trace pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
       .hint {
         margin-top: 0.75rem;
         font-size: 0.78rem;
@@ -189,6 +223,12 @@
       }
       .hint strong {
         color: var(--warn);
+      }
+      .row-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
       }
     </style>
   </head>
@@ -202,14 +242,21 @@
             automation by default, and keeps a <strong style="color: var(--text)">sovereign trace</strong> you can
             export — aligned with OpenClaw-style self-hosting.
           </p>
+          <div class="status-row" id="status" aria-live="polite"></div>
         </div>
-        <div class="pill">ElizaOS · Nosana · Qwen3.5</div>
+        <div>
+          <div class="pill">ElizaOS · Nosana · Qwen3.5</div>
+          <p class="hint" style="margin-top: 0.75rem">
+            Judges: health <code>/api/steward/health</code> · UI <code>/steward</code>
+          </p>
+        </div>
       </header>
 
       <div class="grid">
         <section class="panel">
           <h2>Session</h2>
           <div id="log" aria-live="polite"></div>
+          <p class="thinking" id="thinking"></p>
           <div class="composer">
             <textarea id="input" placeholder="What are you trying to decide or defer?"></textarea>
             <button type="button" id="send">Send</button>
@@ -224,7 +271,13 @@
         <aside class="panel">
           <h2>Artifacts</h2>
           <ul class="artifact-list" id="artifacts"></ul>
+          <div class="row-actions">
+            <button type="button" class="secondary" id="copy">Copy JSON</button>
+            <button type="button" class="secondary" id="refresh">Refresh</button>
+          </div>
           <pre class="detail" id="detail">Select an artifact…</pre>
+          <h2 style="margin-top: 1rem">Trace tail</h2>
+          <div class="trace" id="trace"><pre>(loading)</pre></div>
         </aside>
       </div>
     </div>
@@ -235,6 +288,13 @@
       const send = document.getElementById('send');
       const list = document.getElementById('artifacts');
       const detail = document.getElementById('detail');
+      const status = document.getElementById('status');
+      const thinking = document.getElementById('thinking');
+      const traceEl = document.getElementById('trace');
+      const copyBtn = document.getElementById('copy');
+      const refreshBtn = document.getElementById('refresh');
+
+      let chatTimeoutMs = 125000;
 
       function bubble(role, text) {
         const d = document.createElement('div');
@@ -244,18 +304,59 @@
         log.scrollTop = log.scrollHeight;
       }
 
+      async function loadMeta() {
+        try {
+          const r = await fetch('/api/steward/meta');
+          if (!r.ok) return;
+          const j = await r.json();
+          chatTimeoutMs = (j.limits && j.limits.chatTimeoutMs ? Number(j.limits.chatTimeoutMs) : 120000) + 5000;
+          status.innerHTML = '';
+          const pills = [
+            ['Agent', j.agentName || 'Aperture Steward'],
+            ['Budget', j.attentionBudget || 'normal'],
+            ['Mode', j.sovereigntyMode || 'strict'],
+            ['Max chars', String((j.limits && j.limits.maxMessageChars) || 12000)],
+          ];
+          pills.forEach(([k, v]) => {
+            const p = document.createElement('span');
+            p.className = 'pill';
+            p.textContent = k + ': ' + v;
+            status.appendChild(p);
+          });
+        } catch {
+          /* non-fatal */
+        }
+      }
+
       async function refreshArtifacts() {
         const r = await fetch('/api/steward/artifacts');
         const j = await r.json();
         list.innerHTML = '';
         (j.items || []).forEach((it) => {
           const li = document.createElement('li');
-          li.textContent = it.name;
+          li.textContent = it.parseError ? it.name + ' (parse error)' : it.name;
           li.onclick = () => {
-            detail.textContent = JSON.stringify(it.content, null, 2);
+            detail.textContent = it.parseError
+              ? String(it.error || 'Could not parse JSON for this artifact.')
+              : JSON.stringify(it.content, null, 2);
           };
           list.appendChild(li);
         });
+      }
+
+      async function refreshTrace() {
+        try {
+          const r = await fetch('/api/steward/trace?limit=40');
+          const j = await r.json();
+          const lines = j.lines || [];
+          const hdr = j.truncated ? '(tail truncated to save bandwidth)\n\n' : '';
+          traceEl.innerHTML = '<pre></pre>';
+          traceEl.querySelector('pre').textContent =
+            hdr + (lines.length ? lines.map((x) => JSON.stringify(x)).join('\n') : '(empty trace)');
+        } catch (e) {
+          traceEl.innerHTML = '<pre></pre>';
+          traceEl.querySelector('pre').textContent = 'Trace unavailable: ' + String(e && e.message ? e.message : e);
+        }
       }
 
       async function sendMessage() {
@@ -264,22 +365,64 @@
         input.value = '';
         bubble('you', text);
         send.disabled = true;
+        thinking.textContent = 'Thinking…';
+        const ac = new AbortController();
+        const t = setTimeout(() => ac.abort(), chatTimeoutMs);
         try {
           const r = await fetch('/api/steward/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: text }),
+            signal: ac.signal,
           });
-          const j = await r.json();
-          if (!r.ok) throw new Error(j.error || r.statusText);
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            const hint =
+              r.status === 413
+                ? 'Message too large for steward limits.'
+                : r.status === 504
+                  ? 'Upstream model call timed out.'
+                  : j.error || r.statusText;
+            throw new Error(hint);
+          }
           bubble('agent', j.reply || '(empty)');
         } catch (e) {
-          bubble('agent', 'Error: ' + (e && e.message ? e.message : String(e)));
+          const msg =
+            e && e.name === 'AbortError'
+              ? 'Request aborted after waiting ' + Math.round(chatTimeoutMs / 1000) + 's.'
+              : e && e.message
+                ? e.message
+                : String(e);
+          bubble('agent', 'Error: ' + msg);
         } finally {
+          clearTimeout(t);
+          thinking.textContent = '';
           send.disabled = false;
           refreshArtifacts();
+          refreshTrace();
         }
       }
+
+      copyBtn.addEventListener('click', async () => {
+        const t = detail.textContent || '';
+        try {
+          await navigator.clipboard.writeText(t);
+          copyBtn.textContent = 'Copied';
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy JSON';
+          }, 1200);
+        } catch {
+          copyBtn.textContent = 'Copy failed';
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy JSON';
+          }, 1200);
+        }
+      });
+
+      refreshBtn.addEventListener('click', async () => {
+        await refreshArtifacts();
+        await refreshTrace();
+      });
 
       send.addEventListener('click', sendMessage);
       input.addEventListener('keydown', (ev) => {
@@ -289,8 +432,13 @@
         }
       });
 
-      bubble('agent', 'OpenClaw energy: your model runs where you deploy it — on Nosana — with artifacts on disk.');
+      bubble(
+        'agent',
+        'OpenClaw energy: your model runs where you deploy it — on Nosana — with artifacts on disk. Tip: open /api/steward/health for readiness probes.'
+      );
+      loadMeta();
       refreshArtifacts();
+      refreshTrace();
     </script>
   </body>
 </html>

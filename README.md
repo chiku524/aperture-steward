@@ -13,11 +13,38 @@ This submission implements **Aperture Steward**, a personal agent optimized for 
 - `data/sovereignty-trace.ndjson` — one JSON line per inbound message (timestamp, source, text preview).
 - `data/artifacts/decision-*.json` — structured digests when you ask the agent to **record** a decision or commitment (via the `RECORD_DECISION_DIGEST` action).
 
-A dedicated **custom web UI** is served by the agent at **`/steward`** (same port as the Eliza server, typically 3000). It calls `POST /api/steward/chat` and lists artifacts from `GET /api/steward/artifacts`.
+A dedicated **custom web UI** is served by the agent at **`/steward`** (same port as the Eliza server, typically 3000). It calls `POST /api/steward/chat`, lists artifacts from `GET /api/steward/artifacts`, and can surface recent trace lines from `GET /api/steward/trace`. Readiness for dashboards and probes: `GET /api/steward/health`; operator-facing limits and paths: `GET /api/steward/meta`.
 
-Environment knobs (optional): `ATTENTION_BUDGET_LEVEL` and `SOVEREIGNTY_MODE` (see `.env.example`).
+Environment knobs (optional): `ATTENTION_BUDGET_LEVEL`, `SOVEREIGNTY_MODE`, `STEWARD_MAX_MESSAGE_CHARS`, `STEWARD_CHAT_TIMEOUT_MS` (see `.env.example`).
 
 Public repository for this work: [github.com/chiku524/aperture-steward](https://github.com/chiku524/aperture-steward).
+
+---
+
+## Hackathon submission pack (Nosana × ElizaOS)
+
+Use this checklist against the official requirements (deadline **April 14, 2026**):
+
+- [ ] **Public GitHub fork** with this agent code on the challenge branch your submission expects.
+- [ ] **Live Nosana URL** that serves **`/steward`** and responds on **`/api/steward/health`** (ready for judges and uptime probes).
+- [ ] **≤300-word project description** (paste into the submission form). A tight outline you can adapt:
+  - **Problem:** reactive assistants optimize for engagement; they burn attention and encourage risky automation.
+  - **Approach:** Aperture Steward is a personal **cognitive-load** agent: default-deny noisy automation, batch decisions, and keep **operator-owned** artifacts (`data/sovereignty-trace.ndjson`, `data/artifacts/decision-*.json`).
+  - **Stack:** ElizaOS v2 + Nosana-hosted **Qwen3.5-27B** inference/embeddings + a first-party **`/steward`** UI (`POST /api/steward/chat`).
+  - **Nosana depth:** containerized agent with a **`container/create-volume`** step mounting **`/app/data`** so SQLite + steward traces survive restarts on decentralized nodes.
+  - **Demo script (video <60s):** open `/steward` → send a planning prompt → trigger a digest with “record a decision digest …” → show artifacts updating → hit `/api/steward/health` in a second tab.
+- [ ] **Video demo (<1 minute)** showing the UI and one artifact write.
+- [ ] **Social post** + **stars** on `agent-challenge`, `nosana-programs`, `nosana-kit`, `nosana-cli`.
+
+Local verification before you push a new image:
+
+```bash
+pnpm install
+pnpm build
+docker build -t yourusername/aperture-steward-agent:latest .
+docker run --rm -p 3000:3000 --env-file .env yourusername/aperture-steward-agent:latest
+# Visit http://localhost:3000/steward and http://localhost:3000/api/steward/health
+```
 
 ---
 
@@ -245,51 +272,28 @@ Before deploying, ensure you have:
 Your agent needs to be containerized and available on a public registry (Docker Hub) so Nosana nodes can pull and run it.
 
 ```bash
-# Build your Docker image
-docker build -t yourusername/nosana-eliza-agent:latest .
+# Build your Docker image (this fork defaults to the aperture-steward image name)
+docker build -t yourusername/aperture-steward-agent:latest .
 
 # Test it locally first (recommended)
-docker run -p 3000:3000 --env-file .env yourusername/nosana-eliza-agent:latest
+docker run --rm -p 3000:3000 --env-file .env yourusername/aperture-steward-agent:latest
 
-# Visit http://localhost:3000 to verify it works
+# Visit http://localhost:3000/steward and http://localhost:3000/api/steward/health
 
 # Log in to Docker Hub
 docker login
 
 # Push to Docker Hub (make it public)
-docker push yourusername/nosana-eliza-agent:latest
+docker push yourusername/aperture-steward-agent:latest
 ```
 
 > **Tip:** Replace `yourusername` with your actual Docker Hub username. Make sure your repository is **public** so Nosana nodes can pull it.
 
 ### Step 2: Configure Your Job Definition
 
-Edit `nos_job_def/nosana_eliza_job_definition.json` and update the Docker image reference:
+Edit [`nos_job_def/nosana_eliza_job_definition.json`](./nos_job_def/nosana_eliza_job_definition.json) and set the `image` field to the Docker Hub image you pushed.
 
-```json
-{
-  "version": "0.1",
-  "type": "container",
-  "meta": {
-    "trigger": "cli"
-  },
-  "ops": [
-    {
-      "type": "container/run",
-      "id": "eliza-agent",
-      "args": {
-        "image": "yourusername/nosana-eliza-agent:latest",  // <- Change this
-        "ports": ["3000:3000"],
-        "env": {
-          "OPENAI_API_KEY": "nosana",
-          "OPENAI_API_URL": "https://6vq2bcqphcansrs9b88ztxfs88oqy7etah2ugudytv2x.node.k8s.prd.nos.ci/v1",
-          "MODEL_NAME": "Qwen3.5-27B-AWQ-4bit"
-        }
-      }
-    }
-  ]
-}
-```
+This fork ships a **two-step** job: `container/create-volume` (named `aperture-steward-data`) plus `container/run` with that volume mounted at **`/app/data`** so SQLite and steward artifacts persist across restarts. If your deployment target does not support multi-op jobs yet, remove the `container/create-volume` op and the `volumes` array from the run step and keep a single `container/run` operation.
 
 > **Security Note:** For production deployments, avoid hardcoding sensitive environment variables. Consider using Nosana secrets management or external secret stores.
 
@@ -444,8 +448,12 @@ Submit your project via the official submission page: **[superteam.fun/earn/list
 ```
 ├── characters/
 │   └── agent.character.json   # Your agent's character definition
+├── public/
+│   └── steward.html           # Dedicated /steward UI (served by the plugin)
 ├── src/
-│   └── index.ts               # Custom plugin entry point (optional)
+│   ├── index.ts               # Project agent wiring
+│   ├── character.ts           # Loads characters/agent.character.json
+│   └── plugin.ts              # Steward plugin (routes, actions, trace)
 ├── nos_job_def/
 │   └── nosana_eliza_job_definition.json  # Nosana deployment config
 ├── Dockerfile                 # Container configuration
