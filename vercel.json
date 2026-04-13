@@ -1,10 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "echo 'skip install for static + api'",
-  "buildCommand": "echo 'skip build for static + api'",
+  "buildCommand": "node -e \"const fs=require('fs'); fs.copyFileSync('public/index.html','index.html'); fs.copyFileSync('public/steward.html','steward.html');\"",
   "rewrites": [
-    { "source": "/", "destination": "/public/index.html" },
-    { "source": "/aperture/steward", "destination": "/public/steward.html" },
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/aperture/steward", "destination": "/steward.html" },
+    { "source": "/aperture/steward/", "destination": "/steward.html" },
     { "source": "/aperture/(.*)", "destination": "/api/proxy?p=$1" }
   ]
 }

@@ -94,3 +94,7 @@ bun.lockb
 
 # Runtime steward data (local / container volume)
 /data/
+
+# Vercel: vercel.json buildCommand copies public/*.html to root for static rewrites
+/index.html
+/steward.html

@@ -31,7 +31,7 @@ Use this checklist against the official requirements (deadline **April 14, 2026*
 - [ ] **Public GitHub fork** with this agent code on the challenge branch your submission expects.
 - [ ] **Live Nosana URL** that serves **`/aperture/steward`** and responds on **`/aperture/api/steward/health`** (ready for judges and uptime probes).
 - [ ] **≤300-word project description** — ready-to-paste prose (~269 words), social drafts, and URL verification steps live in [`HACKATHON_SUBMISSION.md`](./HACKATHON_SUBMISSION.md).
-- [ ] **Vercel (optional but recommended)** — connect this repo, set **`AGENT_BASE_URL`** to your Nosana job origin (no trailing slash), redeploy. **`/`** rewrites to **`/public/index.html`**; **`/aperture/*`** (except the static steward page) rewrites to **`/api/proxy?p=…`** (flat serverless bridge — do **not** set `outputDirectory: "public"` or `/api/*` will 404). Optional **`REPO_URL`** overrides the landing page GitHub link.
+- [ ] **Vercel (optional but recommended)** — connect this repo, set **`AGENT_BASE_URL`** to your Nosana job origin (no trailing slash), redeploy. **`buildCommand`** copies `public/index.html` and `public/steward.html` to the deployment root so **`/`** and **`/aperture/steward`** can rewrite to real static files; other **`/aperture/*`** paths use **`/api/proxy?p=…`**. Do **not** set `outputDirectory: "public"` or `/api/*` will 404. Optional **`REPO_URL`** overrides the landing page GitHub link.
   - **Demo script (video <60s):** open **`/aperture/steward`** → send a planning prompt → trigger a digest with “record a decision digest …” → show artifacts updating → hit **`/aperture/api/steward/health`** in a second tab (on Nosana directly, or on Vercel after `AGENT_BASE_URL` is set).
 - [ ] **Video demo (<1 minute)** showing the UI and one artifact write.
 - [ ] **Social post** + **stars** on `agent-challenge`, `nosana-programs`, `nosana-kit`, `nosana-cli`.
@@ -461,7 +461,7 @@ Submit your project via the official submission page: **[superteam.fun/earn/list
 ├── nos_job_def/
 │   └── nosana_eliza_job_definition.json  # Nosana deployment config
 ├── Dockerfile                 # Container configuration
-├── vercel.json                # Vercel: rewrites (no outputDirectory — keeps /api/* alive)
+├── vercel.json                # Vercel: build copies public HTML to root; rewrites; no outputDirectory
 ├── DEPLOY.md                  # Ordered: Docker → Nosana → verify → Vercel
 ├── scripts/
 │   └── verify-endpoints.mjs   # pnpm run verify:deploy -- <origin>

@@ -57,7 +57,7 @@ You want **`/aperture/api/steward/health`** → JSON with `"status":"ok"` (or `"
 
 1. Connect this GitHub repo to Vercel (root of repo).
 2. **Environment variables:** `AGENT_BASE_URL` = the same Nosana origin (no trailing slash). Optional: `REPO_URL` for the landing GitHub link.
-3. **Do not** set `vercel.json` → `outputDirectory` to `public` alone — that deploys static files only and **`/api/*` (the Nosana bridge) returns 404**. This repo’s `vercel.json` uses rewrites only; the bridge is the flat handler **`api/proxy.js`** (`/api/proxy?p=…`).
+3. **Do not** set `vercel.json` → `outputDirectory` to `public` alone — that deploys static files only and **`/api/*` (the Nosana bridge) returns 404**. This repo’s `vercel.json` runs a short **`buildCommand`** that copies `public/index.html` and `public/steward.html` to the deployment root (so `/` and `/aperture/steward` rewrites resolve); the Nosana bridge is **`api/proxy.js`** (`/api/proxy?p=…`).
 4. Redeploy, then open your `.vercel.app` and repeat the checks (paths under **`/aperture/*`** rewrite to the Nosana proxy).
 
 ---
