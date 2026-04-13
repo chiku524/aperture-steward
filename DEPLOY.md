@@ -91,3 +91,4 @@ The wizard merges answers into **`.env`** (gitignored), can run **`pnpm run veri
 | Image is private | Docker Hub repo must be **public** so Nosana can pull. |
 | `yourusername/...` still in JSON | Replace with your real Docker Hub name before deploy. |
 | “Incorrect API key provided: nosana” | Eliza **`@elizaos/plugin-openai` uses `OPENAI_BASE_URL`** for chat (not `OPENAI_API_URL`). Set **`OPENAI_BASE_URL`** to the Nosana **`…/v1`** URL and **`OPENAI_API_KEY=nosana`** on the **agent** (Nosana env or `.env`), then restart. |
+| Vercel **`AGENT_BASE_URL`** set to the **Qwen inference** host (`…/v1`) | **`AGENT_BASE_URL` must be the Nosana deployment HTTPS origin** for port 3000 (from the deployment’s **`endpoints[].url`**, no `/v1` path). Inference URLs belong only in **`OPENAI_BASE_URL`** on the **agent**, not in Vercel. |
