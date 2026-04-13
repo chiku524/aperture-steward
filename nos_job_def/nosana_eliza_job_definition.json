@@ -16,7 +16,7 @@
       "type": "container/run",
       "id": "agent",
       "args": {
-        "image": "yourusername/aperture-steward-agent:latest",
+        "image": "docker.io/nicobuilds/aperture-steward-agent:latest",
         "expose": 3000,
         "volumes": [
           {
