@@ -1,9 +1,7 @@
 /**
- * Vercel serverless bridge: forwards /api/steward/* to the live Nosana agent (AGENT_BASE_URL).
- * Keeps the steward UI on Vercel same-origin so the browser does not need CORS on the agent.
+ * Proxies /aperture/* (after rewrite) to AGENT_BASE_URL, preserving path and query.
+ * Browser hits /aperture/api/steward/health → rewrite → this handler → upstream same path.
  */
-
-const ALLOWED = new Set(['chat', 'artifacts', 'trace', 'health', 'meta']);
 
 export default async function handler(req, res) {
   const base = process.env.AGENT_BASE_URL?.replace(/\/$/, '');
@@ -12,16 +10,11 @@ export default async function handler(req, res) {
     return;
   }
 
-  const slugParam = req.query.slug;
-  const path = Array.isArray(slugParam) ? slugParam.join('/') : String(slugParam || '');
-  if (!ALLOWED.has(path)) {
-    res.status(404).json({ error: 'unknown steward route' });
-    return;
-  }
-
-  const rawUrl = typeof req.url === 'string' ? req.url : '/';
+  const segs = req.query.path;
+  const mid = Array.isArray(segs) ? segs.join('/') : String(segs ?? '');
+  const rawUrl = typeof req.url === 'string' ? req.url : '';
   const q = rawUrl.includes('?') ? rawUrl.slice(rawUrl.indexOf('?')) : '';
-  const target = `${base}/api/steward/${path}${q}`;
+  const target = `${base}/aperture/${mid}${q}`;
 
   const init = {
     method: req.method,

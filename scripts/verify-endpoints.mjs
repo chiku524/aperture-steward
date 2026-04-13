@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
  * Smoke-check a deployed Aperture Steward origin (Nosana or local).
+ * ElizaOS mounts this plugin at /aperture (see src/plugin.ts STEWARD_ROUTE_PLUGIN_NAME).
+ *
  * Usage:
  *   pnpm run verify:deploy https://your-origin.node.k8s.prd.nos.ci
  *   BASE_URL=https://... pnpm run verify:deploy
@@ -9,15 +11,18 @@
 const argv = process.argv.slice(2).filter((a) => a !== '--');
 const rawArg = argv.find((a) => /^https?:\/\//i.test(a));
 const base = (process.env.BASE_URL || rawArg || '').replace(/\/$/, '');
+const mount = (process.env.STEWARD_MOUNT || '/aperture').replace(/\/$/, '') || '/aperture';
 
 if (!base) {
-  console.error('Missing base URL. Example:\n  pnpm run verify:deploy https://your-job.node.k8s.prd.nos.ci\n  BASE_URL=https://127.0.0.1:3000 pnpm run verify:deploy');
+  console.error(
+    'Missing base URL. Example:\n  pnpm run verify:deploy https://your-job.node.k8s.prd.nos.ci\n  BASE_URL=https://127.0.0.1:3000 pnpm run verify:deploy'
+  );
   process.exit(1);
 }
 
 const paths = [
-  { path: '/api/steward/health', wantJson: true },
-  { path: '/steward', wantJson: false },
+  { path: `${mount}/api/steward/health`, wantJson: true },
+  { path: `${mount}/steward`, wantJson: false },
 ];
 
 let failed = false;

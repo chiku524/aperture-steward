@@ -40,6 +40,6 @@ ENV SERVER_PORT=3000
 USER node
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.SERVER_PORT||3000)+'/api/steward/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.SERVER_PORT||3000)+'/aperture/api/steward/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["pnpm", "start"]

@@ -146,7 +146,7 @@
       <div class="panel">
         <h2>Run the agent</h2>
         <div class="row">
-          <a class="btn primary" href="/steward">Open steward chat</a>
+          <a class="btn primary" href="/aperture/steward">Open steward chat</a>
           <a class="btn ghost" id="github" href="https://github.com/chiku524/aperture-steward" target="_blank" rel="noopener"
             >GitHub</a
           >
@@ -161,7 +161,7 @@
         <ol>
           <li>After Nosana deploy, copy the job <strong>origin</strong> (e.g. <code>https://….node.k8s.prd.nos.ci</code>).</li>
           <li>In Vercel → Project → Settings → Environment Variables, set <code>AGENT_BASE_URL</code> to that origin (no trailing slash).</li>
-          <li>Redeploy. Then open <code>/steward</code> and this site’s <code>/api/steward/health</code> (proxied to the agent).</li>
+          <li>Redeploy. Then open <code>/aperture/steward</code> and <code>/aperture/api/steward/health</code> (rewritten to the Nosana agent).</li>
           <li>Optionally set <code>REPO_URL</code> if you forked elsewhere; it powers the GitHub button via <code>/api/config</code>.</li>
         </ol>
       </div>
@@ -193,9 +193,9 @@
 
       document.getElementById('probe').addEventListener('click', async () => {
         healthEl.style.display = 'block';
-        healthEl.textContent = 'Fetching /api/steward/health …';
+        healthEl.textContent = 'Fetching /aperture/api/steward/health …';
         try {
-          const r = await fetch('/api/steward/health');
+          const r = await fetch('/aperture/api/steward/health');
           const text = await r.text();
           healthEl.className = 'status ' + (r.ok ? 'ok' : 'bad');
           healthEl.textContent = r.status + ' ' + r.statusText + '\n' + text;

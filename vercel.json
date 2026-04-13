@@ -3,5 +3,8 @@
   "installCommand": "echo 'skip install for static + api'",
   "buildCommand": "echo 'skip build for static + api'",
   "outputDirectory": "public",
-  "rewrites": [{ "source": "/steward", "destination": "/steward.html" }]
+  "rewrites": [
+    { "source": "/aperture/steward", "destination": "/steward.html" },
+    { "source": "/aperture/:path*", "destination": "/api/nosana-proxy/:path*" }
+  ]
 }

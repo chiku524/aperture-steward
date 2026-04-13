@@ -1,7 +1,7 @@
 # Aperture Steward — deploy and verify
 
 **Official project name:** **Aperture Steward**  
-**One-line pitch:** A personal cognitive-load agent on ElizaOS — sovereign trace, decision artifacts, `/steward` UI, Nosana inference.
+**One-line pitch:** A personal cognitive-load agent on ElizaOS — sovereign trace, decision artifacts, steward UI at **`/aperture/steward`**, Nosana inference.
 
 Technical package name (npm / Docker): `aperture-steward-agent`.
 
@@ -16,7 +16,7 @@ pnpm install
 pnpm build
 docker build -t YOURUSER/aperture-steward-agent:latest .
 docker run --rm -p 3000:3000 --env-file .env YOURUSER/aperture-steward-agent:latest
-# Local: http://localhost:3000/steward and http://localhost:3000/api/steward/health
+# Local: http://localhost:3000/aperture/steward and http://localhost:3000/aperture/api/steward/health
 
 docker login
 docker push YOURUSER/aperture-steward-agent:latest
@@ -49,7 +49,7 @@ set BASE_URL=https://YOUR_ORIGIN
 pnpm run verify:deploy
 ```
 
-You want **`/api/steward/health`** → JSON with `"status":"ok"` (or `"degraded"` with details) and **`/steward`** → HTML 200.
+You want **`/aperture/api/steward/health`** → JSON with `"status":"ok"` (or `"degraded"` with details) and **`/aperture/steward`** → HTML 200.
 
 ---
 
@@ -57,7 +57,7 @@ You want **`/api/steward/health`** → JSON with `"status":"ok"` (or `"degraded"
 
 1. Connect this GitHub repo to Vercel (root of repo).
 2. **Environment variables:** `AGENT_BASE_URL` = the same Nosana origin (no trailing slash). Optional: `REPO_URL` for the landing GitHub link.
-3. Redeploy, then open your `.vercel.app` and repeat the checks (the UI proxies `/api/steward/*` to Nosana).
+3. Redeploy, then open your `.vercel.app` and repeat the checks (paths under **`/aperture/*`** rewrite to the Nosana proxy).
 
 ---
 
@@ -65,7 +65,7 @@ You want **`/api/steward/health`** → JSON with `"status":"ok"` (or `"degraded"
 
 - Copy description and social text from [`HACKATHON_SUBMISSION.md`](./HACKATHON_SUBMISSION.md).
 - Submit the **Nosana** URL (required) and, if you use it, your **Vercel** URL as the friendly entry point.
-- Record **&lt;1 min** demo: landing or `/steward` → chat → “record a decision digest …” → artifacts → health.
+- Record **&lt;1 min** demo: landing or **`/aperture/steward`** → chat → “record a decision digest …” → artifacts → health.
 
 ---
 
@@ -74,5 +74,6 @@ You want **`/api/steward/health`** → JSON with `"status":"ok"` (or `"degraded"
 | Mistake | Fix |
 |--------|-----|
 | Jupyter / port **8888** | Agent must **expose 3000** and run the Eliza image, not `pytorch-jupyter`. |
+| Checking **`/steward`** or **`/api/steward/health`** | ElizaOS mounts this plugin under **`/aperture`** — use **`/aperture/steward`** and **`/aperture/api/steward/health`**. |
 | Image is private | Docker Hub repo must be **public** so Nosana can pull. |
 | `yourusername/...` still in JSON | Replace with your real Docker Hub name before deploy. |

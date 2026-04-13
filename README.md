@@ -16,7 +16,7 @@ This submission implements **Aperture Steward**, a personal agent optimized for 
 - `data/sovereignty-trace.ndjson` — one JSON line per inbound message (timestamp, source, text preview).
 - `data/artifacts/decision-*.json` — structured digests when you ask the agent to **record** a decision or commitment (via the `RECORD_DECISION_DIGEST` action).
 
-A dedicated **custom web UI** is served by the agent at **`/steward`** (same port as the Eliza server, typically 3000). It calls `POST /api/steward/chat`, lists artifacts from `GET /api/steward/artifacts`, and can surface recent trace lines from `GET /api/steward/trace`. Readiness for dashboards and probes: `GET /api/steward/health`; operator-facing limits and paths: `GET /api/steward/meta`.
+A dedicated **custom web UI** is served by the agent at **`/aperture/steward`** (same port as the Eliza server, typically 3000). ElizaOS prefixes plugin HTTP routes with the plugin name (`aperture` in this repo), so API paths are under **`/aperture/api/steward/*`**. Examples: `POST /aperture/api/steward/chat`, `GET /aperture/api/steward/artifacts`, `GET /aperture/api/steward/trace`, `GET /aperture/api/steward/health`, `GET /aperture/api/steward/meta`. The built-in Eliza client may still occupy **`/steward`**; use **`/aperture/steward`** for this project’s UI.
 
 Environment knobs (optional): `ATTENTION_BUDGET_LEVEL`, `SOVEREIGNTY_MODE`, `STEWARD_MAX_MESSAGE_CHARS`, `STEWARD_CHAT_TIMEOUT_MS` (see `.env.example`).
 
@@ -29,10 +29,10 @@ Public repository for this work: [github.com/chiku524/aperture-steward](https://
 Use this checklist against the official requirements (deadline **April 14, 2026**). Detailed ordering is in [`DEPLOY.md`](./DEPLOY.md).
 
 - [ ] **Public GitHub fork** with this agent code on the challenge branch your submission expects.
-- [ ] **Live Nosana URL** that serves **`/steward`** and responds on **`/api/steward/health`** (ready for judges and uptime probes).
+- [ ] **Live Nosana URL** that serves **`/aperture/steward`** and responds on **`/aperture/api/steward/health`** (ready for judges and uptime probes).
 - [ ] **≤300-word project description** — ready-to-paste prose (~269 words), social drafts, and URL verification steps live in [`HACKATHON_SUBMISSION.md`](./HACKATHON_SUBMISSION.md).
-- [ ] **Vercel (optional but recommended)** — connect this repo, set **`AGENT_BASE_URL`** to your Nosana job origin (no trailing slash), redeploy. The site serves **`/`** from `public/index.html` and proxies **`/api/steward/*`** to the agent via `api/steward/[slug].js`, so **`/steward`** on your `.vercel.app` can drive the same UI as production. Optional **`REPO_URL`** overrides the landing page GitHub link.
-  - **Demo script (video <60s):** open `/steward` → send a planning prompt → trigger a digest with “record a decision digest …” → show artifacts updating → hit `/api/steward/health` in a second tab (on Nosana directly, or on Vercel after `AGENT_BASE_URL` is set).
+- [ ] **Vercel (optional but recommended)** — connect this repo, set **`AGENT_BASE_URL`** to your Nosana job origin (no trailing slash), redeploy. The site serves **`/`** from `public/index.html`; **`/aperture/*`** rewrites to **`api/nosana-proxy`** which forwards to the agent. Optional **`REPO_URL`** overrides the landing page GitHub link.
+  - **Demo script (video <60s):** open **`/aperture/steward`** → send a planning prompt → trigger a digest with “record a decision digest …” → show artifacts updating → hit **`/aperture/api/steward/health`** in a second tab (on Nosana directly, or on Vercel after `AGENT_BASE_URL` is set).
 - [ ] **Video demo (<1 minute)** showing the UI and one artifact write.
 - [ ] **Social post** + **stars** on `agent-challenge`, `nosana-programs`, `nosana-kit`, `nosana-cli`.
 
@@ -43,7 +43,7 @@ pnpm install
 pnpm build
 docker build -t yourusername/aperture-steward-agent:latest .
 docker run --rm -p 3000:3000 --env-file .env yourusername/aperture-steward-agent:latest
-# Visit http://localhost:3000/steward and http://localhost:3000/api/steward/health
+# Visit http://localhost:3000/aperture/steward and http://localhost:3000/aperture/api/steward/health
 ```
 
 ---
@@ -278,7 +278,7 @@ docker build -t yourusername/aperture-steward-agent:latest .
 # Test it locally first (recommended)
 docker run --rm -p 3000:3000 --env-file .env yourusername/aperture-steward-agent:latest
 
-# Visit http://localhost:3000/steward and http://localhost:3000/api/steward/health
+# Visit http://localhost:3000/aperture/steward and http://localhost:3000/aperture/api/steward/health
 
 # Log in to Docker Hub
 docker login
@@ -448,12 +448,12 @@ Submit your project via the official submission page: **[superteam.fun/earn/list
 ```
 ├── api/
 │   ├── config.js              # Vercel: public env snapshot for landing page
-│   └── steward/               # Vercel: [slug].js proxies /api/steward/* → AGENT_BASE_URL
+│   └── nosana-proxy/          # Vercel: [...path].js proxies /aperture/* → AGENT_BASE_URL
 ├── characters/
 │   └── agent.character.json   # Your agent's character definition
 ├── public/
 │   ├── index.html             # Vercel landing (also safe if served as static /)
-│   └── steward.html           # Dedicated /steward UI (served by the plugin)
+│   └── steward.html           # Steward UI (served at /aperture/steward on the agent)
 ├── src/
 │   ├── index.ts               # Project agent wiring
 │   ├── character.ts           # Loads characters/agent.character.json
@@ -461,7 +461,7 @@ Submit your project via the official submission page: **[superteam.fun/earn/list
 ├── nos_job_def/
 │   └── nosana_eliza_job_definition.json  # Nosana deployment config
 ├── Dockerfile                 # Container configuration
-├── vercel.json                # Vercel: static output + /steward rewrite
+├── vercel.json                # Vercel: static output + /aperture rewrites
 ├── DEPLOY.md                  # Ordered: Docker → Nosana → verify → Vercel
 ├── scripts/
 │   └── verify-endpoints.mjs   # pnpm run verify:deploy -- <origin>

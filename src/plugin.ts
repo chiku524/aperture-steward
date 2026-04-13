@@ -28,6 +28,9 @@ import {
 } from 'fs';
 import { join } from 'path';
 
+/** ElizaOS mounts each plugin route at `/${plugin.name}<route.path>`. Keep this short for public URLs. */
+const STEWARD_ROUTE_PLUGIN_NAME = 'aperture';
+
 const ARTIFACTS_DIR = join(process.cwd(), 'data', 'artifacts');
 const TRACE_PATH = join(process.cwd(), 'data', 'sovereignty-trace.ndjson');
 const PROCESS_STARTED_AT = Date.now();
@@ -222,9 +225,9 @@ const recordDigestAction: Action = {
 };
 
 export const apertureStewardPlugin: Plugin = {
-  name: 'aperture-steward',
+  name: STEWARD_ROUTE_PLUGIN_NAME,
   description:
-    'Personal cognitive-load steward: sovereign trace logging, decision artifacts, and a dedicated /steward UI.',
+    'Personal cognitive-load steward: sovereign trace logging, decision artifacts, and a dedicated steward UI under /aperture/steward.',
 
   providers: [stewardProvider],
   actions: [recordDigestAction],
@@ -270,7 +273,7 @@ export const apertureStewardPlugin: Plugin = {
           const ready = await runtime.isReady();
           res.json({
             status: 'ok',
-            service: 'aperture-steward',
+            service: 'aperture-steward-plugin',
             ready,
             uptimeSec: Math.round(process.uptime()),
             startedAtMs: PROCESS_STARTED_AT,
@@ -291,6 +294,7 @@ export const apertureStewardPlugin: Plugin = {
       type: 'GET',
       public: true,
       handler: async (_req: RouteRequest, res: RouteResponse, runtime: IAgentRuntime) => {
+        const mount = `/${STEWARD_ROUTE_PLUGIN_NAME}`;
         res.json({
           agentName: runtime.character.name,
           attentionBudget: attentionBudget(),
@@ -300,10 +304,12 @@ export const apertureStewardPlugin: Plugin = {
             chatTimeoutMs: chatTimeoutMs(),
           },
           paths: {
-            stewardUi: '/steward',
-            chat: '/api/steward/chat',
-            artifacts: '/api/steward/artifacts',
-            trace: '/api/steward/trace',
+            stewardUi: `${mount}/steward`,
+            chat: `${mount}/api/steward/chat`,
+            artifacts: `${mount}/api/steward/artifacts`,
+            trace: `${mount}/api/steward/trace`,
+            health: `${mount}/api/steward/health`,
+            meta: `${mount}/api/steward/meta`,
           },
         });
       },

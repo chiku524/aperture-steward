@@ -247,7 +247,10 @@
         <div>
           <div class="pill">ElizaOS · Nosana · Qwen3.5</div>
           <p class="hint" style="margin-top: 0.75rem">
-            Judges: health <code>/api/steward/health</code> · UI <code>/steward</code>
+            Judges: health <code>/aperture/api/steward/health</code> · UI <code>/aperture/steward</code>
+            <span style="display: block; margin-top: 0.35rem; font-size: 0.72rem">
+              (ElizaOS mounts plugin routes under <code>/aperture</code>.)
+            </span>
           </p>
         </div>
       </header>
@@ -283,6 +286,9 @@
     </div>
 
     <script>
+      /** Must match plugin name in src/plugin.ts (ElizaOS URL prefix). */
+      const STEWARD_BASE = '/aperture';
+
       const log = document.getElementById('log');
       const input = document.getElementById('input');
       const send = document.getElementById('send');
@@ -306,7 +312,7 @@
 
       async function loadMeta() {
         try {
-          const r = await fetch('/api/steward/meta');
+          const r = await fetch(STEWARD_BASE + '/api/steward/meta');
           if (!r.ok) return;
           const j = await r.json();
           chatTimeoutMs = (j.limits && j.limits.chatTimeoutMs ? Number(j.limits.chatTimeoutMs) : 120000) + 5000;
@@ -329,7 +335,7 @@
       }
 
       async function refreshArtifacts() {
-        const r = await fetch('/api/steward/artifacts');
+        const r = await fetch(STEWARD_BASE + '/api/steward/artifacts');
         const j = await r.json();
         list.innerHTML = '';
         (j.items || []).forEach((it) => {
@@ -346,7 +352,7 @@
 
       async function refreshTrace() {
         try {
-          const r = await fetch('/api/steward/trace?limit=40');
+          const r = await fetch(STEWARD_BASE + '/api/steward/trace?limit=40');
           const j = await r.json();
           const lines = j.lines || [];
           const hdr = j.truncated ? '(tail truncated to save bandwidth)\n\n' : '';
@@ -369,7 +375,7 @@
         const ac = new AbortController();
         const t = setTimeout(() => ac.abort(), chatTimeoutMs);
         try {
-          const r = await fetch('/api/steward/chat', {
+          const r = await fetch(STEWARD_BASE + '/api/steward/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: text }),
@@ -434,7 +440,9 @@
 
       bubble(
         'agent',
-        'OpenClaw energy: your model runs where you deploy it — on Nosana — with artifacts on disk. Tip: open /api/steward/health for readiness probes.'
+        'OpenClaw energy: your model runs where you deploy it — on Nosana — with artifacts on disk. Tip: open ' +
+          STEWARD_BASE +
+          '/api/steward/health for readiness probes.'
       );
       loadMeta();
       refreshArtifacts();
