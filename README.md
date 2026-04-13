@@ -6,6 +6,21 @@ Build your own **personal AI agent** using [ElizaOS](https://elizaos.com) and de
 
 ---
 
+## This fork: Aperture Steward
+
+This submission implements **Aperture Steward**, a personal agent optimized for **cognitive load** and **data sovereignty** rather than generic “always-on assistant” behavior. It is deliberately uncommon: it **default-refuses noisy automation** (for example, blasting the same message across every social channel), **batches reasoning** into decision-oriented answers, and maintains an **operator-owned audit trail** on disk:
+
+- `data/sovereignty-trace.ndjson` — one JSON line per inbound message (timestamp, source, text preview).
+- `data/artifacts/decision-*.json` — structured digests when you ask the agent to **record** a decision or commitment (via the `RECORD_DECISION_DIGEST` action).
+
+A dedicated **custom web UI** is served by the agent at **`/steward`** (same port as the Eliza server, typically 3000). It calls `POST /api/steward/chat` and lists artifacts from `GET /api/steward/artifacts`.
+
+Environment knobs (optional): `ATTENTION_BUDGET_LEVEL` and `SOVEREIGNTY_MODE` (see `.env.example`).
+
+Public repository for this work: [github.com/chiku524/aperture-steward](https://github.com/chiku524/aperture-steward).
+
+---
+
 ## The Challenge
 
 Inspired by [OpenClaw](https://openclaw.ai/) — the self-hosted personal AI movement — this challenge is about giving AI back to the individual. Build an agent that runs on **your own infrastructure**, handles **your own tasks**, and keeps **your own data**.
