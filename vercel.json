@@ -2,9 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "echo 'skip install for static + api'",
   "buildCommand": "echo 'skip build for static + api'",
-  "outputDirectory": "public",
   "rewrites": [
-    { "source": "/aperture/steward", "destination": "/steward.html" },
+    { "source": "/", "destination": "/public/index.html" },
+    { "source": "/aperture/steward", "destination": "/public/steward.html" },
     { "source": "/aperture/:path*", "destination": "/api/nosana-proxy/:path*" }
   ]
 }
