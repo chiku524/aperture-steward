@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "echo 'skip install for static + api'",
+  "buildCommand": "echo 'skip build for static + api'",
+  "outputDirectory": "public",
+  "rewrites": [{ "source": "/steward", "destination": "/steward.html" }]
+}

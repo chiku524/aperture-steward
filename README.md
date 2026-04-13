@@ -8,6 +8,9 @@ Build your own **personal AI agent** using [ElizaOS](https://elizaos.com) and de
 
 ## This fork: Aperture Steward
 
+**Project name:** **Aperture Steward** (tagline: *personal cognitive-load agent* — sovereign trace, steward UI, Nosana inference).  
+**Next steps to ship:** follow [`DEPLOY.md`](./DEPLOY.md) (Docker → Nosana → `pnpm run verify:deploy` → optional Vercel → submission).
+
 This submission implements **Aperture Steward**, a personal agent optimized for **cognitive load** and **data sovereignty** rather than generic “always-on assistant” behavior. It is deliberately uncommon: it **default-refuses noisy automation** (for example, blasting the same message across every social channel), **batches reasoning** into decision-oriented answers, and maintains an **operator-owned audit trail** on disk:
 
 - `data/sovereignty-trace.ndjson` — one JSON line per inbound message (timestamp, source, text preview).
@@ -23,16 +26,13 @@ Public repository for this work: [github.com/chiku524/aperture-steward](https://
 
 ## Hackathon submission pack (Nosana × ElizaOS)
 
-Use this checklist against the official requirements (deadline **April 14, 2026**):
+Use this checklist against the official requirements (deadline **April 14, 2026**). Detailed ordering is in [`DEPLOY.md`](./DEPLOY.md).
 
 - [ ] **Public GitHub fork** with this agent code on the challenge branch your submission expects.
 - [ ] **Live Nosana URL** that serves **`/steward`** and responds on **`/api/steward/health`** (ready for judges and uptime probes).
-- [ ] **≤300-word project description** (paste into the submission form). A tight outline you can adapt:
-  - **Problem:** reactive assistants optimize for engagement; they burn attention and encourage risky automation.
-  - **Approach:** Aperture Steward is a personal **cognitive-load** agent: default-deny noisy automation, batch decisions, and keep **operator-owned** artifacts (`data/sovereignty-trace.ndjson`, `data/artifacts/decision-*.json`).
-  - **Stack:** ElizaOS v2 + Nosana-hosted **Qwen3.5-27B** inference/embeddings + a first-party **`/steward`** UI (`POST /api/steward/chat`).
-  - **Nosana depth:** containerized agent with a **`container/create-volume`** step mounting **`/app/data`** so SQLite + steward traces survive restarts on decentralized nodes.
-  - **Demo script (video <60s):** open `/steward` → send a planning prompt → trigger a digest with “record a decision digest …” → show artifacts updating → hit `/api/steward/health` in a second tab.
+- [ ] **≤300-word project description** — ready-to-paste prose (~269 words), social drafts, and URL verification steps live in [`HACKATHON_SUBMISSION.md`](./HACKATHON_SUBMISSION.md).
+- [ ] **Vercel (optional but recommended)** — connect this repo, set **`AGENT_BASE_URL`** to your Nosana job origin (no trailing slash), redeploy. The site serves **`/`** from `public/index.html` and proxies **`/api/steward/*`** to the agent via `api/steward/[slug].js`, so **`/steward`** on your `.vercel.app` can drive the same UI as production. Optional **`REPO_URL`** overrides the landing page GitHub link.
+  - **Demo script (video <60s):** open `/steward` → send a planning prompt → trigger a digest with “record a decision digest …” → show artifacts updating → hit `/api/steward/health` in a second tab (on Nosana directly, or on Vercel after `AGENT_BASE_URL` is set).
 - [ ] **Video demo (<1 minute)** showing the UI and one artifact write.
 - [ ] **Social post** + **stars** on `agent-challenge`, `nosana-programs`, `nosana-kit`, `nosana-cli`.
 
@@ -446,9 +446,13 @@ Submit your project via the official submission page: **[superteam.fun/earn/list
 ## Project Structure
 
 ```
+├── api/
+│   ├── config.js              # Vercel: public env snapshot for landing page
+│   └── steward/               # Vercel: [slug].js proxies /api/steward/* → AGENT_BASE_URL
 ├── characters/
 │   └── agent.character.json   # Your agent's character definition
 ├── public/
+│   ├── index.html             # Vercel landing (also safe if served as static /)
 │   └── steward.html           # Dedicated /steward UI (served by the plugin)
 ├── src/
 │   ├── index.ts               # Project agent wiring
@@ -457,6 +461,10 @@ Submit your project via the official submission page: **[superteam.fun/earn/list
 ├── nos_job_def/
 │   └── nosana_eliza_job_definition.json  # Nosana deployment config
 ├── Dockerfile                 # Container configuration
+├── vercel.json                # Vercel: static output + /steward rewrite
+├── DEPLOY.md                  # Ordered: Docker → Nosana → verify → Vercel
+├── scripts/
+│   └── verify-endpoints.mjs   # pnpm run verify:deploy -- <origin>
 ├── .env.example               # Environment variable template
 └── package.json
 ```

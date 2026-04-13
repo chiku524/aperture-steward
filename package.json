@@ -1,6 +1,7 @@
 {
   "name": "aperture-steward-agent",
   "version": "0.1.0",
+  "description": "Aperture Steward — personal cognitive-load ElizaOS agent (Nosana + steward UI)",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -8,7 +9,8 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "start": "elizaos start",
-    "dev": "elizaos dev"
+    "dev": "elizaos dev",
+    "verify:deploy": "node scripts/verify-endpoints.mjs"
   },
   "dependencies": {
     "@elizaos/core": "^1.0.0",

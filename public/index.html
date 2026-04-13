@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Aperture Steward — personal cognitive-load agent on ElizaOS and Nosana. Landing page with links to chat and health checks."
+    />
+    <title>Aperture Steward — landing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070a0f;
+        --panel: #0f141c;
+        --border: #1c2736;
+        --text: #e8f0ff;
+        --muted: #7f92b0;
+        --accent: #5eead4;
+        --warn: #fbbf24;
+        --bad: #f87171;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'DM Sans', system-ui, sans-serif;
+        background: radial-gradient(1200px 800px at 10% -10%, #122038 0%, var(--bg) 55%);
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 2.5rem 1.25rem 4rem;
+      }
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin: 0 0 0.5rem;
+      }
+      .lead {
+        color: var(--muted);
+        line-height: 1.55;
+        font-size: 1.05rem;
+        margin: 0 0 1.75rem;
+      }
+      .panel {
+        background: linear-gradient(160deg, #111822 0%, var(--panel) 40%);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.25rem 1.35rem;
+        margin-bottom: 1rem;
+      }
+      .panel h2 {
+        margin: 0 0 0.75rem;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        align-items: center;
+      }
+      a.btn,
+      button.btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.55rem 1.1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-family: inherit;
+        font-size: 0.95rem;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+      }
+      a.btn.primary,
+      button.btn.primary {
+        background: var(--accent);
+        color: #042f2e;
+      }
+      a.btn.ghost,
+      button.btn.ghost {
+        background: #111c2a;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .status {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 0.75rem;
+        line-height: 1.5;
+      }
+      .status.ok {
+        color: var(--accent);
+      }
+      .status.bad {
+        color: var(--bad);
+      }
+      .status.warn {
+        color: var(--warn);
+      }
+      code {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.82em;
+        background: #0a0e14;
+        padding: 0.12rem 0.35rem;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+      }
+      ol {
+        margin: 0;
+        padding-left: 1.2rem;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+      ol li {
+        margin-bottom: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Aperture Steward</h1>
+      <p class="lead">
+        Personal cognitive-load agent on <strong style="color: var(--text)">ElizaOS</strong> and
+        <strong style="color: var(--text)">Nosana</strong>. This page is the lightweight
+        <strong style="color: var(--text)">Vercel</strong> front door; the model and steward APIs run on your
+        <strong style="color: var(--text)">live Nosana deployment</strong> (set <code>AGENT_BASE_URL</code> in Vercel).
+      </p>
+
+      <div class="panel">
+        <h2>Run the agent</h2>
+        <div class="row">
+          <a class="btn primary" href="/steward">Open steward chat</a>
+          <a class="btn ghost" id="github" href="https://github.com/chiku524/aperture-steward" target="_blank" rel="noopener"
+            >GitHub</a
+          >
+          <button type="button" class="btn ghost" id="probe">Check health (via bridge)</button>
+        </div>
+        <p class="status" id="cfg">Loading configuration…</p>
+        <pre class="status" id="health" style="display: none; white-space: pre-wrap; margin-top: 0.5rem"></pre>
+      </div>
+
+      <div class="panel">
+        <h2>Judges &amp; operators</h2>
+        <ol>
+          <li>After Nosana deploy, copy the job <strong>origin</strong> (e.g. <code>https://….node.k8s.prd.nos.ci</code>).</li>
+          <li>In Vercel → Project → Settings → Environment Variables, set <code>AGENT_BASE_URL</code> to that origin (no trailing slash).</li>
+          <li>Redeploy. Then open <code>/steward</code> and this site’s <code>/api/steward/health</code> (proxied to the agent).</li>
+          <li>Optionally set <code>REPO_URL</code> if you forked elsewhere; it powers the GitHub button via <code>/api/config</code>.</li>
+        </ol>
+      </div>
+    </div>
+
+    <script>
+      const cfgEl = document.getElementById('cfg');
+      const healthEl = document.getElementById('health');
+      const gh = document.getElementById('github');
+
+      async function loadConfig() {
+        try {
+          const r = await fetch('/api/config');
+          const j = await r.json();
+          if (j.repoUrl) gh.href = j.repoUrl;
+          if (!j.configured) {
+            cfgEl.className = 'status warn';
+            cfgEl.textContent =
+              'AGENT_BASE_URL is not set — steward chat on this domain will 503 until you add it in Vercel and redeploy.';
+            return;
+          }
+          cfgEl.className = 'status ok';
+          cfgEl.textContent = 'Bridge configured → upstream host: ' + (j.agentHost || '(unknown)');
+        } catch (e) {
+          cfgEl.className = 'status bad';
+          cfgEl.textContent = 'Could not load /api/config: ' + (e && e.message ? e.message : String(e));
+        }
+      }
+
+      document.getElementById('probe').addEventListener('click', async () => {
+        healthEl.style.display = 'block';
+        healthEl.textContent = 'Fetching /api/steward/health …';
+        try {
+          const r = await fetch('/api/steward/health');
+          const text = await r.text();
+          healthEl.className = 'status ' + (r.ok ? 'ok' : 'bad');
+          healthEl.textContent = r.status + ' ' + r.statusText + '\n' + text;
+        } catch (e) {
+          healthEl.className = 'status bad';
+          healthEl.textContent = String(e && e.message ? e.message : e);
+        }
+      });
+
+      loadConfig();
+    </script>
+  </body>
+</html>
