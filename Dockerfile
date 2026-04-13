@@ -16,8 +16,8 @@ ENV DO_NOT_TRACK=1
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm and Bun (ElizaOS CLI uses Bun to run project builds)
+RUN npm install -g pnpm bun
 
 # Copy package manifest and install dependencies
 COPY package.json ./

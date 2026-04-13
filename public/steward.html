@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aperture Steward — personal cognitive load agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070a0f;
+        --panel: #0f141c;
+        --border: #1c2736;
+        --text: #e8f0ff;
+        --muted: #7f92b0;
+        --accent: #5eead4;
+        --accent-dim: #2dd4bf44;
+        --warn: #fbbf24;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'DM Sans', system-ui, sans-serif;
+        background: radial-gradient(1200px 800px at 10% -10%, #122038 0%, var(--bg) 55%);
+        color: var(--text);
+      }
+      .shell {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 3rem;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+      }
+      h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin: 0 0 0.35rem;
+      }
+      .tagline {
+        color: var(--muted);
+        max-width: 36rem;
+        line-height: 1.5;
+        font-size: 0.95rem;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        font-size: 0.75rem;
+        color: var(--muted);
+        font-family: 'IBM Plex Mono', monospace;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 1.25rem;
+      }
+      @media (max-width: 880px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .panel {
+        background: linear-gradient(160deg, #111822 0%, var(--panel) 40%);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem 1.1rem;
+      }
+      .panel h2 {
+        margin: 0 0 0.75rem;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+      #log {
+        height: min(52vh, 420px);
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding-right: 0.25rem;
+      }
+      .bubble {
+        border-radius: 12px;
+        padding: 0.65rem 0.85rem;
+        max-width: 92%;
+        line-height: 1.45;
+        font-size: 0.92rem;
+        white-space: pre-wrap;
+      }
+      .bubble.you {
+        align-self: flex-end;
+        background: #182536;
+        border: 1px solid #243147;
+      }
+      .bubble.agent {
+        align-self: flex-start;
+        background: var(--accent-dim);
+        border: 1px solid #2dd4bf66;
+      }
+      .composer {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.85rem;
+      }
+      textarea {
+        flex: 1;
+        resize: vertical;
+        min-height: 52px;
+        max-height: 160px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #0a0e14;
+        color: var(--text);
+        padding: 0.6rem 0.75rem;
+        font: inherit;
+      }
+      textarea:focus {
+        outline: 2px solid #2dd4bf55;
+        border-color: #2dd4bf88;
+      }
+      button {
+        border: none;
+        border-radius: 10px;
+        padding: 0 1.1rem;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        background: var(--accent);
+        color: #042f2e;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      .artifact-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: 360px;
+        overflow-y: auto;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.72rem;
+      }
+      .artifact-list li {
+        padding: 0.45rem 0;
+        border-bottom: 1px solid #1a2433;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .artifact-list li:hover {
+        color: var(--accent);
+      }
+      pre.detail {
+        margin: 0.75rem 0 0;
+        padding: 0.65rem;
+        background: #0a0e14;
+        border-radius: 8px;
+        overflow: auto;
+        max-height: 200px;
+        font-size: 0.7rem;
+        color: #cbd5e1;
+        border: 1px solid var(--border);
+      }
+      .hint {
+        margin-top: 0.75rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .hint strong {
+        color: var(--warn);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div>
+          <h1>Aperture Steward</h1>
+          <p class="tagline">
+            A personal agent that treats your attention as a finite resource: it batches reasoning, refuses noisy
+            automation by default, and keeps a <strong style="color: var(--text)">sovereign trace</strong> you can
+            export — aligned with OpenClaw-style self-hosting.
+          </p>
+        </div>
+        <div class="pill">ElizaOS · Nosana · Qwen3.5</div>
+      </header>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>Session</h2>
+          <div id="log" aria-live="polite"></div>
+          <div class="composer">
+            <textarea id="input" placeholder="What are you trying to decide or defer?"></textarea>
+            <button type="button" id="send">Send</button>
+          </div>
+          <p class="hint">
+            Try: <strong>“Record a decision digest: I will ship the MVP without Twitter auto-posting.”</strong> The
+            agent stores JSON artifacts under <code>data/artifacts/</code> and appends a line to
+            <code>data/sovereignty-trace.ndjson</code> for every inbound message.
+          </p>
+        </section>
+
+        <aside class="panel">
+          <h2>Artifacts</h2>
+          <ul class="artifact-list" id="artifacts"></ul>
+          <pre class="detail" id="detail">Select an artifact…</pre>
+        </aside>
+      </div>
+    </div>
+
+    <script>
+      const log = document.getElementById('log');
+      const input = document.getElementById('input');
+      const send = document.getElementById('send');
+      const list = document.getElementById('artifacts');
+      const detail = document.getElementById('detail');
+
+      function bubble(role, text) {
+        const d = document.createElement('div');
+        d.className = 'bubble ' + (role === 'you' ? 'you' : 'agent');
+        d.textContent = text;
+        log.appendChild(d);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      async function refreshArtifacts() {
+        const r = await fetch('/api/steward/artifacts');
+        const j = await r.json();
+        list.innerHTML = '';
+        (j.items || []).forEach((it) => {
+          const li = document.createElement('li');
+          li.textContent = it.name;
+          li.onclick = () => {
+            detail.textContent = JSON.stringify(it.content, null, 2);
+          };
+          list.appendChild(li);
+        });
+      }
+
+      async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        bubble('you', text);
+        send.disabled = true;
+        try {
+          const r = await fetch('/api/steward/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text }),
+          });
+          const j = await r.json();
+          if (!r.ok) throw new Error(j.error || r.statusText);
+          bubble('agent', j.reply || '(empty)');
+        } catch (e) {
+          bubble('agent', 'Error: ' + (e && e.message ? e.message : String(e)));
+        } finally {
+          send.disabled = false;
+          refreshArtifacts();
+        }
+      }
+
+      send.addEventListener('click', sendMessage);
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' && !ev.shiftKey) {
+          ev.preventDefault();
+          sendMessage();
+        }
+      });
+
+      bubble('agent', 'OpenClaw energy: your model runs where you deploy it — on Nosana — with artifacts on disk.');
+      refreshArtifacts();
+    </script>
+  </body>
+</html>

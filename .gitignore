@@ -85,10 +85,12 @@ next-env.d.ts
 
 .mastra/
 
-# lock files
+# lock files (keep pnpm-lock.yaml for reproducible installs)
 package-lock.json
 yarn.lock
-pnpm-lock.yaml
 bun.lockb
 /.eliza/.elizadb
 /dist
+
+# Runtime steward data (local / container volume)
+/data/

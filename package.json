@@ -1,11 +1,14 @@
 {
-  "name": "nosana-eliza-agent",
+  "name": "aperture-steward-agent",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "dist/index.js",
+  "packageType": "project",
   "scripts": {
-    "start": "elizaos start --character ./characters/agent.character.json",
-    "dev": "elizaos dev --character ./characters/agent.character.json"
+    "build": "tsc --project tsconfig.json",
+    "start": "elizaos start",
+    "dev": "elizaos dev"
   },
   "dependencies": {
     "@elizaos/core": "^1.0.0",
@@ -15,6 +18,7 @@
   },
   "devDependencies": {
     "@elizaos/cli": "^1.0.0",
+    "@types/node": "^22.0.0",
     "typescript": "^5.0.0"
   }
 }
