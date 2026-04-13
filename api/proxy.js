@@ -1,6 +1,6 @@
 /**
- * Proxies /aperture/* (after rewrite) to AGENT_BASE_URL, preserving path and query.
- * Browser hits /aperture/api/steward/health → rewrite → this handler → upstream same path.
+ * Vercel bridge: GET/POST /aperture/* → AGENT_BASE_URL/aperture/*
+ * Invoked as /api/proxy?p=<rest> (see vercel.json rewrite). Flat file avoids nested [...] route 404s.
  */
 
 export default async function handler(req, res) {
@@ -10,11 +10,18 @@ export default async function handler(req, res) {
     return;
   }
 
-  const segs = req.query.path;
-  const mid = Array.isArray(segs) ? segs.join('/') : String(segs ?? '');
-  const rawUrl = typeof req.url === 'string' ? req.url : '';
-  const q = rawUrl.includes('?') ? rawUrl.slice(rawUrl.indexOf('?')) : '';
-  const target = `${base}/aperture/${mid}${q}`;
+  const url = new URL(req.url, 'http://localhost');
+  let p = url.searchParams.get('p') || '';
+  p = p.replace(/^\/+/, '').replace(/\/+$/, '');
+  if (!p || p.includes('..')) {
+    res.status(400).json({ error: 'missing_or_invalid_path' });
+    return;
+  }
+
+  const usp = new URLSearchParams(url.search);
+  usp.delete('p');
+  const q = usp.toString();
+  const target = `${base}/aperture/${p}${q ? `?${q}` : ''}`;
 
   const init = {
     method: req.method,

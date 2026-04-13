@@ -5,6 +5,6 @@
   "rewrites": [
     { "source": "/", "destination": "/public/index.html" },
     { "source": "/aperture/steward", "destination": "/public/steward.html" },
-    { "source": "/aperture/:path*", "destination": "/api/nosana-proxy/:path*" }
+    { "source": "/aperture/(.*)", "destination": "/api/proxy?p=$1" }
   ]
 }
