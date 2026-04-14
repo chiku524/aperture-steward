@@ -29,12 +29,12 @@ const DRY = process.argv.includes('--dry-run');
 const DEFAULTS = {
   OPENAI_API_KEY: 'nosana',
   /** Eliza `@elizaos/plugin-openai` reads this for chat — not `OPENAI_API_URL`. */
-  OPENAI_BASE_URL: 'https://6vq2bcqphcansrs9b88ztxfs88oqy7etah2ugudytv2x.node.k8s.prd.nos.ci/v1',
+  OPENAI_BASE_URL: 'https://5i8frj7ann99bbw9gzpprvzj2esugg39hxbb4unypskq.node.k8s.prd.nos.ci/v1',
   OPENAI_EMBEDDING_URL: 'https://4yiccatpyxx773jtewo5ccwhw1s2hezq5pehndb6fcfq.node.k8s.prd.nos.ci/v1',
   OPENAI_EMBEDDING_API_KEY: 'nosana',
   OPENAI_EMBEDDING_MODEL: 'Qwen3-Embedding-0.6B',
   OPENAI_EMBEDDING_DIMENSIONS: '1024',
-  MODEL_NAME: 'Qwen3.5-27B-AWQ-4bit',
+  MODEL_NAME: 'Qwen3.5-9B-FP8',
   ATTENTION_BUDGET_LEVEL: 'normal',
   SOVEREIGNTY_MODE: 'strict',
   SERVER_PORT: '3000',

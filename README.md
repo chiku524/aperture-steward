@@ -58,7 +58,7 @@ Inspired by [OpenClaw](https://openclaw.ai/) — the self-hosted personal AI mov
 
 **Framework:** [ElizaOS](https://elizaos.com) (latest v2)
 **Compute:** [Nosana](https://nosana.com) decentralized GPU network
-**Model:** Qwen3.5-27B (hosted endpoint provided by Nosana)
+**Model:** Qwen3.5-9B-FP8 (hosted endpoint provided by Nosana; id from `GET …/v1/models`)
 
 ---
 
@@ -148,19 +148,18 @@ These credits cover the compute costs for running your agent during the challeng
 
 ## Configure Your LLM
 
-Nosana provides a hosted **Qwen3.5-27B-AWQ-4bit** endpoint for challenge participants. Update your `.env`:
+Nosana assigns a hosted **OpenAI-compatible** chat endpoint and model id (support may rotate them). Confirm with **`GET {OPENAI_BASE_URL}/models`**. Update your `.env`:
 
 ```env
 OPENAI_API_KEY=nosana
-OPENAI_BASE_URL=https://6vq2bcqphcansrs9b88ztxfs88oqy7etah2ugudytv2x.node.k8s.prd.nos.ci/v1
-MODEL_NAME=Qwen3.5-27B-AWQ-4bit
+OPENAI_BASE_URL=https://5i8frj7ann99bbw9gzpprvzj2esugg39hxbb4unypskq.node.k8s.prd.nos.ci/v1
+MODEL_NAME=Qwen3.5-9B-FP8
 ```
 
-**Model Details:**
-- **Model ID:** `Qwen3.5-27B-AWQ-4bit`
-- **Max Context Length:** 60,000 tokens
-- **Provider:** Nosana decentralized inference
-- **Base Model:** cyankiwi/Qwen3.5-27B-AWQ-4bit
+**Model details (current support handoff):**
+- **Model ID:** `Qwen3.5-9B-FP8` (served by **vLLM**; root `lovedheart/Qwen3.5-9B-FP8`)
+- **Max context (`max_model_len`):** 30,000 tokens (per `/v1/models` payload)
+- **Embeddings:** still use **`OPENAI_EMBEDDING_*`** in [`.env.example`](./.env.example) unless Nosana gives you a new embedding base URL.
 
 ### Option B: Local Development with Ollama
 
@@ -364,7 +363,7 @@ Once your job is running on Nosana:
 1. **Test the endpoint** — Visit the public URL provided by Nosana
 2. **Check agent responsiveness** — Send a test message to your agent
 3. **Monitor logs** — Use the Nosana Dashboard or CLI to view logs
-4. **Verify inference** — Ensure the Qwen3.5-27B model is responding correctly
+4. **Verify inference** — `curl` `POST …/v1/chat/completions` with **`MODEL_NAME`** until you get **200** JSON (not **503** / “Service Initializing”).
 
 ### Troubleshooting
 
@@ -499,7 +498,7 @@ Submit your project via the official submission page: **[superteam.fun/earn/list
 - [Nosana Discord](https://nosana.com/discord) — Support and endpoint URL
 
 ### Qwen3.5
-- [Qwen3.5-27B on HuggingFace](https://huggingface.co/Qwen/Qwen3.5-27B)
+- [Qwen3.5 collection on HuggingFace](https://huggingface.co/collections/Qwen/qwen25)
 
 ---
 
