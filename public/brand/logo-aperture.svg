@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Aperture Steward mark">
+  <defs>
+    <linearGradient id="a" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5eead4"/>
+      <stop offset="100%" stop-color="#2dd4bf"/>
+    </linearGradient>
+    <filter id="glow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <circle cx="64" cy="64" r="60" fill="#070a0f" stroke="#1c2736" stroke-width="1.5"/>
+  <g fill="none" stroke="url(#a)" stroke-width="2.4" stroke-linecap="round" filter="url(#glow)">
+    <path d="M64 64V28c12 2 22 10 28 20"/>
+    <path d="M64 64V28" transform="rotate(60 64 64)"/>
+    <path d="M64 64V28" transform="rotate(120 64 64)"/>
+    <path d="M64 64V28" transform="rotate(180 64 64)"/>
+    <path d="M64 64V28" transform="rotate(240 64 64)"/>
+    <path d="M64 64V28" transform="rotate(300 64 64)"/>
+  </g>
+  <circle cx="64" cy="64" r="10" fill="none" stroke="url(#a)" stroke-width="2"/>
+</svg>

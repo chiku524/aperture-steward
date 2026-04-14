@@ -25,16 +25,43 @@ async function getBodyForUpstream(req) {
   return raw && raw.length > 0 ? raw : '{}';
 }
 
+function parseAgentOrigin(raw) {
+  const trimmed = raw?.trim().replace(/\/$/, '');
+  if (!trimmed) return { ok: false, reason: 'missing' };
+  try {
+    const href = trimmed.includes('://') ? trimmed : `https://${trimmed}`;
+    const u = new URL(href);
+    const path = u.pathname.replace(/\/$/, '') || '';
+    if (path.endsWith('/v1') || path === '/v1') {
+      return {
+        ok: false,
+        reason: 'inference_url',
+        detail:
+          'AGENT_BASE_URL must be the agent HTTP origin (Eliza on port 3000), not the Qwen OpenAI-compatible inference URL. The inference base ends in /v1 and belongs only in OPENAI_BASE_URL on the Nosana container.',
+      };
+    }
+    const origin = `${u.protocol}//${u.host}`;
+    return { ok: true, origin };
+  } catch {
+    return { ok: false, reason: 'invalid_url', detail: 'AGENT_BASE_URL is not a valid http(s) origin.' };
+  }
+}
+
 export default async function handler(req, res) {
-  const base = process.env.AGENT_BASE_URL?.replace(/\/$/, '');
-  if (!base) {
-    res.status(503).json({ error: 'AGENT_BASE_URL is not set in Vercel project environment variables' });
+  const parsed = parseAgentOrigin(process.env.AGENT_BASE_URL);
+  if (!parsed.ok) {
+    if (parsed.reason === 'missing') {
+      res.status(503).json({ error: 'AGENT_BASE_URL is not set in Vercel project environment variables' });
+      return;
+    }
+    res.status(400).json({ error: `agent_base_url_${parsed.reason}`, detail: parsed.detail });
     return;
   }
+  const base = parsed.origin;
 
   if (process.env.VERCEL_URL) {
     try {
-      const agent = new URL(base.includes('://') ? base : `https://${base}`);
+      const agent = new URL(base);
       const deployment = new URL(`https://${process.env.VERCEL_URL}`);
       if (agent.hostname === deployment.hostname) {
         res.status(400).json({
@@ -45,7 +72,7 @@ export default async function handler(req, res) {
         return;
       }
     } catch {
-      /* ignore invalid AGENT_BASE_URL here; fetch will fail later */
+      /* ignore */
     }
   }
 
@@ -97,10 +124,20 @@ export default async function handler(req, res) {
     res.status(502);
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+    const probePath = `/aperture/${p}`;
     res.json({
       error: 'upstream_returned_html',
       detail:
-        'AGENT_BASE_URL reached an Eliza server that served HTML (usually the stock ElizaOS client) for /aperture/api/steward/*. Point AGENT_BASE_URL at the Nosana (or local) process running this repository’s agent with the aperture plugin, then confirm JSON from GET /aperture/api/steward/health on that origin.',
+        'AGENT_BASE_URL reached a server that returned HTML for a steward API path (often the stock ElizaOS web client, a loading page, or a generic reverse proxy). That origin must serve JSON from the aperture plugin.',
+      agent_origin: base,
+      upstream_path: probePath,
+      upstream_status: upstream.status,
+      verify_cli: `curl -sS "${base}${probePath}" | head -c 200`,
+      checklist: [
+        'Use the Nosana deployment URL for the container that exposes port 3000 (from deploy UI / endpoints), not the Qwen inference …/v1 host.',
+        'Run this repo’s agent (Docker image nicobuilds/aperture-steward-agent or local pnpm) so the aperture plugin registers /aperture/api/steward/*.',
+        `From your machine, GET ${base}/aperture/api/steward/health must return JSON with "aperture-steward-plugin" before the Vercel bridge will work.`,
+      ],
     });
     return;
   }

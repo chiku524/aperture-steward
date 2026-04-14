@@ -77,6 +77,38 @@ function readUiHtml(): string {
   }
 }
 
+/** Served at `/${STEWARD_ROUTE_PLUGIN_NAME}/brand/*` (same paths as Vercel rewrite after deploy). */
+const BRAND_ASSETS: Record<string, string> = {
+  'aperture-steward-hero.png': 'image/png',
+  'aperture-steward-card.png': 'image/png',
+  'favicon.svg': 'image/svg+xml',
+  'logo-aperture.svg': 'image/svg+xml',
+};
+
+function readBrandAsset(filename: string): { body: Buffer; contentType: string } | null {
+  const contentType = BRAND_ASSETS[filename];
+  if (!contentType) return null;
+  const brandDir = join(process.cwd(), 'public', 'brand');
+  const filePath = join(brandDir, filename);
+  const resolved = filePath.replace(/\\/g, '/');
+  const base = brandDir.replace(/\\/g, '/');
+  if (!resolved.startsWith(base)) return null;
+  if (!existsSync(filePath)) return null;
+  return { body: readFileSync(filePath), contentType };
+}
+
+function sendBrandAsset(_req: RouteRequest, res: RouteResponse, filename: string): void {
+  const asset = readBrandAsset(filename);
+  if (!asset) {
+    res.status(404).send('Not found');
+    return;
+  }
+  res.setHeader?.('Content-Type', asset.contentType);
+  res.setHeader?.('Cache-Control', 'public, max-age=86400');
+  const send = res.send as (body: string | Buffer) => void;
+  send(asset.body);
+}
+
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === 'string' ? Number.parseInt(value, 10) : Number(value);
   if (!Number.isFinite(n)) return fallback;
@@ -132,6 +164,97 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): P
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }
+}
+
+function settingString(runtime: IAgentRuntime, key: string): string | undefined {
+  const v = runtime.getSetting(key);
+  if (v === null || v === undefined) return undefined;
+  return typeof v === 'string' ? v : String(v);
+}
+
+/**
+ * Steward HTTP chat: call the configured OpenAI-compatible host with a minimal
+ * `messages: [system, user]` payload. `runtime.generateText` + `@elizaos/plugin-openai`
+ * routes through the AI SDK, which some Nosana / vLLM stacks reject (e.g. unexpected roles).
+ */
+async function stewardChatViaOpenAiCompatible(
+  runtime: IAgentRuntime,
+  userText: string
+): Promise<string> {
+  const baseRaw =
+    settingString(runtime, 'OPENAI_BASE_URL') ?? process.env.OPENAI_BASE_URL ?? '';
+  const apiKey = settingString(runtime, 'OPENAI_API_KEY') ?? process.env.OPENAI_API_KEY ?? '';
+  const model =
+    settingString(runtime, 'OPENAI_LARGE_MODEL') ??
+    settingString(runtime, 'LARGE_MODEL') ??
+    settingString(runtime, 'MODEL_NAME') ??
+    process.env.OPENAI_LARGE_MODEL ??
+    process.env.MODEL_NAME;
+  if (!baseRaw.trim()) {
+    throw new Error('OPENAI_BASE_URL is not configured on the agent');
+  }
+  if (!apiKey.trim()) {
+    throw new Error('OPENAI_API_KEY is not configured on the agent');
+  }
+  if (!model?.trim()) {
+    throw new Error('No chat model configured (OPENAI_LARGE_MODEL / MODEL_NAME)');
+  }
+
+  const c = runtime.character;
+  const parts: string[] = [];
+  const bioText = Array.isArray(c.bio) ? c.bio.join(' ') : c.bio;
+  if (bioText) {
+    parts.push(`# About ${c.name}\n${bioText}`);
+  }
+  if (c.system) {
+    parts.push(c.system);
+  }
+  const styles = [...(c.style?.all ?? []), ...(c.style?.chat ?? [])];
+  if (styles.length > 0) {
+    parts.push(`Style:\n${styles.map((s) => `- ${s}`).join('\n')}`);
+  }
+  const systemContent = parts.length > 0 ? parts.join('\n\n') : 'You are a helpful assistant.';
+
+  const base = baseRaw.replace(/\/$/, '');
+  const url = `${base}/chat/completions`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: model.trim(),
+      messages: [
+        { role: 'system', content: systemContent },
+        { role: 'user', content: userText },
+      ],
+      temperature: 0.7,
+      max_tokens: 8192,
+    }),
+  });
+  const raw = await res.text();
+  if (!res.ok) {
+    throw new Error(`chat completions ${res.status}: ${raw.slice(0, 800)}`);
+  }
+  let data: unknown;
+  try {
+    data = JSON.parse(raw) as unknown;
+  } catch {
+    throw new Error(`chat completions: non-JSON response (${raw.slice(0, 200)})`);
+  }
+  const obj = data as {
+    choices?: Array<{ message?: { content?: string | null; role?: string } }>;
+    error?: { message?: string };
+  };
+  if (obj.error?.message) {
+    throw new Error(obj.error.message);
+  }
+  const content = obj.choices?.[0]?.message?.content;
+  if (typeof content !== 'string' || !content.trim()) {
+    throw new Error('chat completions: empty assistant content');
+  }
+  return content;
 }
 
 /** Map upstream model errors to HTTP status + operator-facing text. */
@@ -278,6 +401,22 @@ export const apertureStewardPlugin: Plugin = {
         res.send(readUiHtml());
       },
     },
+    ...(
+      [
+        'aperture-steward-hero.png',
+        'aperture-steward-card.png',
+        'favicon.svg',
+        'logo-aperture.svg',
+      ] as const
+    ).map((file) => ({
+      name: `steward-brand-${file.replace(/[^a-z0-9]+/gi, '-')}`,
+      path: `/brand/${file}`,
+      type: 'GET' as const,
+      public: true,
+      handler: async (_req: RouteRequest, res: RouteResponse) => {
+        sendBrandAsset(_req, res, file);
+      },
+    })),
     {
       name: 'steward-health',
       path: '/api/steward/health',
@@ -325,6 +464,10 @@ export const apertureStewardPlugin: Plugin = {
             trace: `${mount}/api/steward/trace`,
             health: `${mount}/api/steward/health`,
             meta: `${mount}/api/steward/meta`,
+            brandHero: `${mount}/brand/aperture-steward-hero.png`,
+            brandCard: `${mount}/brand/aperture-steward-card.png`,
+            favicon: `${mount}/brand/favicon.svg`,
+            logo: `${mount}/brand/logo-aperture.svg`,
           },
         });
       },
@@ -365,10 +508,11 @@ export const apertureStewardPlugin: Plugin = {
             res.status(413).json({ error: `message exceeds max length (${maxChars} chars)` });
             return;
           }
-          const generate = runtime.generateText(text, {
-            includeCharacter: true,
-          });
-          const { text: reply } = await withTimeout(generate, chatTimeoutMs(), 'steward chat');
+          const reply = await withTimeout(
+            stewardChatViaOpenAiCompatible(runtime, text),
+            chatTimeoutMs(),
+            'steward chat'
+          );
           res.json({ reply });
         } catch (e) {
           logger.error({ e }, 'steward chat failed');

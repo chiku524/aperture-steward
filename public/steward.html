@@ -3,7 +3,37 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Aperture Steward — personal cognitive load agent</title>
+    <meta
+      name="description"
+      content="Aperture Steward — ElizaOS steward chat with attention-first replies, sovereign trace (NDJSON), decision digests (JSON artifacts), and Nosana Qwen inference."
+    />
+    <meta
+      name="keywords"
+      content="Aperture Steward, ElizaOS, Nosana, Qwen, steward UI, cognitive load, sovereign trace, decision digest, personal AI agent, decentralized inference"
+    />
+    <meta name="author" content="Aperture Steward" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#070a0f" />
+    <link rel="canonical" href="/aperture/steward" />
+    <link rel="icon" type="image/svg+xml" href="/aperture/brand/favicon.svg" />
+    <link rel="apple-touch-icon" href="/aperture/brand/aperture-steward-card.png" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Aperture Steward — steward chat &amp; sovereign trace" />
+    <meta
+      property="og:description"
+      content="Session UI at /aperture/steward: chat, artifacts, trace tail. Operator-owned records; inference on Nosana (Qwen)."
+    />
+    <meta property="og:image" content="/aperture/brand/aperture-steward-card.png" />
+    <meta property="og:image:alt" content="Aperture Steward — sovereign trace, steward UI, Nosana inference" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Aperture Steward — steward chat &amp; sovereign trace" />
+    <meta
+      name="twitter:description"
+      content="ElizaOS plugin UI: chat, artifacts, trace. Decision digests to data/artifacts; inbound line to sovereignty-trace.ndjson."
+    />
+    <meta name="twitter:image" content="/aperture/brand/aperture-steward-card.png" />
+    <title>Aperture Steward — steward chat &amp; sovereign trace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -43,6 +73,17 @@
         align-items: flex-end;
         justify-content: space-between;
         margin-bottom: 2rem;
+      }
+      .brand-title {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+        align-items: center;
+      }
+      .brand-title .logo-mark {
+        width: 2.75rem;
+        height: 2.75rem;
+        flex-shrink: 0;
       }
       h1 {
         font-size: 1.75rem;
@@ -236,7 +277,17 @@
     <div class="shell">
       <header>
         <div>
-          <h1>Aperture Steward</h1>
+          <div class="brand-title">
+            <img
+              class="logo-mark"
+              src="/aperture/brand/logo-aperture.svg"
+              width="44"
+              height="44"
+              alt=""
+              decoding="async"
+            />
+            <h1>Aperture Steward</h1>
+          </div>
           <p class="tagline">
             A personal agent that treats your attention as a finite resource: it batches reasoning, refuses noisy
             automation by default, and keeps a <strong style="color: var(--text)">sovereign trace</strong> you can
