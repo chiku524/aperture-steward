@@ -150,10 +150,14 @@ These credits cover the compute costs for running your agent during the challeng
 
 Nosana assigns a hosted **OpenAI-compatible** chat endpoint and model id (support may rotate them). Confirm with **`GET {OPENAI_BASE_URL}/models`**. Update your `.env`:
 
+**Note:** Eliza’s **`@elizaos/plugin-openai`** picks the chat model from **`OPENAI_LARGE_MODEL` / `OPENAI_SMALL_MODEL`** (and character **`settings.LARGE_MODEL` / `SMALL_MODEL`**). It does **not** read **`MODEL_NAME`** alone; if those are unset, the plugin defaults to **`gpt-4o`** / **`gpt-4o-mini`**, which a Nosana Qwen host will reject.
+
 ```env
 OPENAI_API_KEY=nosana
 OPENAI_BASE_URL=https://5i8frj7ann99bbw9gzpprvzj2esugg39hxbb4unypskq.node.k8s.prd.nos.ci/v1
 MODEL_NAME=Qwen3.5-9B-FP8
+OPENAI_SMALL_MODEL=Qwen3.5-9B-FP8
+OPENAI_LARGE_MODEL=Qwen3.5-9B-FP8
 ```
 
 **Model details (current support handoff):**
@@ -172,6 +176,8 @@ ollama serve
 OPENAI_API_KEY=ollama
 OPENAI_BASE_URL=http://127.0.0.1:11434/v1
 MODEL_NAME=qwen3.5:27b
+OPENAI_SMALL_MODEL=qwen3.5:27b
+OPENAI_LARGE_MODEL=qwen3.5:27b
 ```
 
 ---

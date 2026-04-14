@@ -75,6 +75,8 @@ function buildEnvFile(merged) {
     `OPENAI_API_KEY=${quoteVal(merged.OPENAI_API_KEY)}`,
     `OPENAI_BASE_URL=${quoteVal(merged.OPENAI_BASE_URL)}`,
     `MODEL_NAME=${quoteVal(merged.MODEL_NAME)}`,
+    `OPENAI_SMALL_MODEL=${quoteVal(merged.OPENAI_SMALL_MODEL || merged.MODEL_NAME)}`,
+    `OPENAI_LARGE_MODEL=${quoteVal(merged.OPENAI_LARGE_MODEL || merged.MODEL_NAME)}`,
     '',
     '# Embeddings',
     `OPENAI_EMBEDDING_URL=${quoteVal(merged.OPENAI_EMBEDDING_URL)}`,
