@@ -134,6 +134,21 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): P
   }
 }
 
+/** Map upstream model errors to HTTP status + operator-facing text. */
+function stewardChatFailure(e: unknown): { status: number; error: string } {
+  const message = e instanceof Error ? e.message : 'chat failed';
+  if (/timed out/i.test(message)) {
+    return { status: 504, error: message };
+  }
+  if (/service unavailable|failed after \d+ attempts/i.test(message)) {
+    return {
+      status: 503,
+      error: `${message}. The Nosana Qwen inference host (OPENAI_BASE_URL) often returns 503 while the service is cold-starting or overloaded — wait 60–120s and retry, or confirm the inference URL with Nosana if it persists.`,
+    };
+  }
+  return { status: 500, error: message };
+}
+
 const stewardProvider: Provider = {
   name: 'APERTURE_CONTEXT',
   description:
@@ -357,9 +372,8 @@ export const apertureStewardPlugin: Plugin = {
           res.json({ reply });
         } catch (e) {
           logger.error({ e }, 'steward chat failed');
-          const message = e instanceof Error ? e.message : 'chat failed';
-          const status = /timed out/i.test(message) ? 504 : 500;
-          res.status(status).json({ error: message });
+          const { status, error } = stewardChatFailure(e);
+          res.status(status).json({ error });
         }
       },
     },
