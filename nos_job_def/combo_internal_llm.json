@@ -3,9 +3,15 @@
   "type": "container",
   "meta": {
     "trigger": "deployment-manager",
-    "system_requirements": { "vram_total_mb": 9216 }
+    "system_requirements": {
+      "vram_total_mb": 9216
+    }
   },
-  "global": { "variables": { "MODEL": "qwen3.5:9b" } },
+  "global": {
+    "variables": {
+      "MODEL": "qwen3.5:9b"
+    }
+  },
   "ops": [
     {
       "type": "container/run",
@@ -27,37 +33,40 @@
           }
         ],
         "gpu": true,
-        "resources": [{ "type": "Ollama", "model": "qwen3.5:9b" }]
+        "resources": [
+          {
+            "type": "Ollama",
+            "model": "qwen3.5:9b"
+          }
+        ]
       },
-      "execution": { "group": "run" }
+      "execution": {
+        "group": "run"
+      }
     },
     {
       "type": "container/run",
       "id": "agent",
       "args": {
-        "image": "ghcr.io/chiku524/aperture-steward-agent:latest",
+        "image": "docker.io/nicobuilds/aperture-steward-agent:latest",
         "expose": 3000,
+        "cmd": [
+          "sh",
+          "-c",
+          "echo CmNvbnN0IGZzPXJlcXVpcmUoJ2ZzJyk7CmNvbnN0IHA9Jy9hcHAvZGlzdC9wbHVnaW4uanMnOwpsZXQgcz1mcy5yZWFkRmlsZVN5bmMocCwndXRmOCcpOwpjb25zdCBiYXNlPSJodHRwczovLzRTQXBaS0dEcUh5aG1lbVdHa1pzOE0yclF1WlZqWmdxdFR1NE1iWGVCUGRGLm5vZGUuazhzLnByZC5ub3MuY2kvdjEiOwpjb25zdCByZT0vY29uc3QgYmFzZVJhdyA9IHNldHRpbmdTdHJpbmdcKHJ1bnRpbWUsICdPUEVOQUlfQkFTRV9VUkwnXCkgXD9cPyBwcm9jZXNzXC5lbnZcLk9QRU5BSV9CQVNFX1VSTCBcP1w/ICcnOy87CmlmKCFyZS50ZXN0KHMpKSB7IGNvbnNvbGUuZXJyb3IoJ2Jhc2VSYXcgcGF0dGVybiBtaXNzaW5nJyk7IHByb2Nlc3MuZXhpdCgxKTsgfQpzPXMucmVwbGFjZShyZSwgImNvbnN0IGJhc2VSYXcgPSAnIitiYXNlKyInOyIpOwpzPXMucmVwbGFjZSgvY29uc3QgYXBpS2V5ID0gc2V0dGluZ1N0cmluZ1wocnVudGltZSwgJ09QRU5BSV9BUElfS0VZJ1wpIFw/XD8gcHJvY2Vzc1wuZW52XC5PUEVOQUlfQVBJX0tFWSBcP1w/ICcnOy8sICJjb25zdCBhcGlLZXkgPSAnb2xsYW1hJzsiKTsKLy8gZm9yY2UgbW9kZWwgdmFyaWFibGVzIHRvIHByZWZlciBlbnYgYWZ0ZXIgY2hhcmFjdGVyIGJ5IG92ZXJyaWRpbmcgbW9kZWwgYmxvY2sgc3RhcnQKcz1zLnJlcGxhY2UoL2NvbnN0IG1vZGVsID1ccypzZXR0aW5nU3RyaW5nXChydW50aW1lLCAnT1BFTkFJX0xBUkdFX01PREVMJ1wpIFw/XD9bXHNcU10qP3Byb2Nlc3NcLmVudlwuTU9ERUxfTkFNRTsvLCAiY29uc3QgbW9kZWwgPSAncXdlbjMuNTo5Yic7Iik7CnM9cy5yZXBsYWNlKCdtYXhfdG9rZW5zOiA4MTkyJywnbWF4X3Rva2VuczogMTAyNCcpOwovLyBQcmVmZXIgT2xsYW1hIG5hdGl2ZSBBUEkgZm9yIHJlbGlhYmxlIG5vbi10aGlua2luZyByZXBsaWVzCmlmKCFzLmluY2x1ZGVzKCdVU0UgTkFUSVZFIE9MTEFNQScpKXsKICBzPXMucmVwbGFjZSgKICAgICJjb25zdCB1cmwgPSBgJHtiYXNlfS9jaGF0L2NvbXBsZXRpb25zYDsiLApgLy8gVVNFIE5BVElWRSBPTExBTUEKICAgIGNvbnN0IHJvb3QgPSBiYXNlLnJlcGxhY2UoL1wvdjEkL2ksJycpOwogICAgY29uc3QgdXJsTmF0aXZlID0gcm9vdCArICcvYXBpL2NoYXQnOwogICAgewogICAgICBjb25zdCByZXMgPSBhd2FpdCBmZXRjaCh1cmxOYXRpdmUsIHsKICAgICAgICBtZXRob2Q6ICdQT1NUJywKICAgICAgICBoZWFkZXJzOiB7ICdDb250ZW50LVR5cGUnOiAnYXBwbGljYXRpb24vanNvbicgfSwKICAgICAgICBib2R5OiBKU09OLnN0cmluZ2lmeSh7CiAgICAgICAgICBtb2RlbDogbW9kZWwudHJpbSgpLAogICAgICAgICAgbWVzc2FnZXM6IFsKICAgICAgICAgICAgeyByb2xlOiAnc3lzdGVtJywgY29udGVudDogc3lzdGVtQ29udGVudCB9LAogICAgICAgICAgICB7IHJvbGU6ICd1c2VyJywgY29udGVudDogdXNlclRleHQgfSwKICAgICAgICAgIF0sCiAgICAgICAgICBzdHJlYW06IGZhbHNlLAogICAgICAgICAgdGhpbms6IGZhbHNlLAogICAgICAgIH0pLAogICAgICB9KTsKICAgICAgY29uc3QgcmF3ID0gYXdhaXQgcmVzLnRleHQoKTsKICAgICAgaWYgKCFyZXMub2spIHRocm93IG5ldyBFcnJvcignb2xsYW1hIGNoYXQgJyArIHJlcy5zdGF0dXMgKyAnOiAnICsgcmF3LnNsaWNlKDAsIDQwMCkpOwogICAgICBjb25zdCBkYXRhID0gSlNPTi5wYXJzZShyYXcpOwogICAgICBjb25zdCBjb250ZW50ID0gZGF0YT8ubWVzc2FnZT8uY29udGVudDsKICAgICAgaWYgKHR5cGVvZiBjb250ZW50ID09PSAnc3RyaW5nJyAmJiBjb250ZW50LnRyaW0oKSkgcmV0dXJuIGNvbnRlbnQ7CiAgICAgIHRocm93IG5ldyBFcnJvcignb2xsYW1hIGNoYXQ6IGVtcHR5IGNvbnRlbnQnKTsKICAgIH0KICAgIGNvbnN0IHVybCA9IFxgXCR7YmFzZX0vY2hhdC9jb21wbGV0aW9uc1xgO2AKICApOwp9CmZzLndyaXRlRmlsZVN5bmMocCxzKTsKY29uc29sZS5sb2coJ3BsdWdpbiBwYXRjaGVkIG9rJyk7Cg== | base64 -d > /tmp/patch.js && node /tmp/patch.js && sed -i 's/Qwen3.5-9B-FP8/qwen3.5:9b/g' /app/characters/agent.character.json && printf '%s\n' 'OPENAI_API_KEY=ollama' 'OPENAI_BASE_URL=https://4SApZKGDqHyhmemWGkZs8M2rQuZVjZgqtTu4MbXeBPdF.node.k8s.prd.nos.ci/v1' 'MODEL_NAME=qwen3.5:9b' 'OPENAI_LARGE_MODEL=qwen3.5:9b' > /app/.env && exec pnpm start"
+        ],
         "env": {
           "OPENAI_API_KEY": "ollama",
-          "OPENAI_BASE_URL": "http://127.0.0.1:11434/v1",
-          "OPENAI_API_URL": "http://127.0.0.1:11434/v1",
+          "OPENAI_BASE_URL": "https://4SApZKGDqHyhmemWGkZs8M2rQuZVjZgqtTu4MbXeBPdF.node.k8s.prd.nos.ci/v1",
           "MODEL_NAME": "qwen3.5:9b",
-          "OPENAI_SMALL_MODEL": "qwen3.5:9b",
           "OPENAI_LARGE_MODEL": "qwen3.5:9b",
-          "LARGE_MODEL": "qwen3.5:9b",
-          "SMALL_MODEL": "qwen3.5:9b",
-          "OPENAI_EMBEDDING_URL": "http://127.0.0.1:11434/v1",
-          "OPENAI_EMBEDDING_API_KEY": "ollama",
-          "OPENAI_EMBEDDING_MODEL": "qwen3.5:9b",
-          "OPENAI_EMBEDDING_DIMENSIONS": "4096",
           "SERVER_PORT": "3000",
-          "NODE_ENV": "production",
-          "ATTENTION_BUDGET_LEVEL": "normal",
-          "SOVEREIGNTY_MODE": "strict",
-          "USE_OLLAMA_NATIVE": "1"
+          "NODE_ENV": "production"
         }
       },
-      "execution": { "group": "run" }
+      "execution": {
+        "group": "run"
+      }
     }
   ]
 }
