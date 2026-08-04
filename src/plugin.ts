@@ -181,15 +181,24 @@ async function stewardChatViaOpenAiCompatible(
   runtime: IAgentRuntime,
   userText: string
 ): Promise<string> {
+  // Prefer process.env over runtime settings so Nosana job env (and local .env)
+  // always wins. Runtime/character settings often still point at challenge defaults.
   const baseRaw =
-    settingString(runtime, 'OPENAI_BASE_URL') ?? process.env.OPENAI_BASE_URL ?? '';
-  const apiKey = settingString(runtime, 'OPENAI_API_KEY') ?? process.env.OPENAI_API_KEY ?? '';
+    process.env.OPENAI_BASE_URL?.trim() ||
+    settingString(runtime, 'OPENAI_BASE_URL') ||
+    process.env.OPENAI_API_URL?.trim() ||
+    '';
+  const apiKey =
+    process.env.OPENAI_API_KEY?.trim() ||
+    settingString(runtime, 'OPENAI_API_KEY') ||
+    '';
   const model =
-    settingString(runtime, 'OPENAI_LARGE_MODEL') ??
-    settingString(runtime, 'LARGE_MODEL') ??
-    settingString(runtime, 'MODEL_NAME') ??
-    process.env.OPENAI_LARGE_MODEL ??
-    process.env.MODEL_NAME;
+    process.env.OPENAI_LARGE_MODEL?.trim() ||
+    process.env.MODEL_NAME?.trim() ||
+    process.env.OPENAI_SMALL_MODEL?.trim() ||
+    settingString(runtime, 'OPENAI_LARGE_MODEL') ||
+    settingString(runtime, 'LARGE_MODEL') ||
+    settingString(runtime, 'MODEL_NAME');
   if (!baseRaw.trim()) {
     throw new Error('OPENAI_BASE_URL is not configured on the agent');
   }
@@ -216,6 +225,45 @@ async function stewardChatViaOpenAiCompatible(
   const systemContent = parts.length > 0 ? parts.join('\n\n') : 'You are a helpful assistant.';
 
   const base = baseRaw.replace(/\/$/, '');
+  // When the key is `ollama` (or explicitly requested), use Ollama's native API.
+  // OpenAI-compat often spends the token budget in `reasoning` and returns empty content;
+  // native /api/chat supports `think: false` cleanly.
+  const useOllamaNative =
+    process.env.USE_OLLAMA_NATIVE === '1' ||
+    apiKey.trim().toLowerCase() === 'ollama';
+
+  if (useOllamaNative) {
+    const root = base.replace(/\/v1$/i, '');
+    const res = await fetch(`${root}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: model.trim(),
+        messages: [
+          { role: 'system', content: systemContent },
+          { role: 'user', content: userText },
+        ],
+        stream: false,
+        think: false,
+      }),
+    });
+    const raw = await res.text();
+    if (!res.ok) {
+      throw new Error(`ollama chat ${res.status}: ${raw.slice(0, 800)}`);
+    }
+    let data: unknown;
+    try {
+      data = JSON.parse(raw) as unknown;
+    } catch {
+      throw new Error(`ollama chat: non-JSON response (${raw.slice(0, 200)})`);
+    }
+    const content = (data as { message?: { content?: string } })?.message?.content;
+    if (typeof content !== 'string' || !content.trim()) {
+      throw new Error('ollama chat: empty assistant content');
+    }
+    return content;
+  }
+
   const url = `${base}/chat/completions`;
   const res = await fetch(url, {
     method: 'POST',
@@ -230,7 +278,10 @@ async function stewardChatViaOpenAiCompatible(
         { role: 'user', content: userText },
       ],
       temperature: 0.7,
-      max_tokens: 8192,
+      // Ollama/local GPUs can spend a long time on huge completions; keep replies tight for steward chat.
+      max_tokens: 1024,
+      // Qwen3 thinking models otherwise burn the budget into `reasoning` and leave content empty.
+      think: false,
     }),
   });
   const raw = await res.text();
@@ -244,14 +295,24 @@ async function stewardChatViaOpenAiCompatible(
     throw new Error(`chat completions: non-JSON response (${raw.slice(0, 200)})`);
   }
   const obj = data as {
-    choices?: Array<{ message?: { content?: string | null; role?: string } }>;
+    choices?: Array<{
+      message?: {
+        content?: string | null;
+        reasoning?: string | null;
+        role?: string;
+      };
+    }>;
     error?: { message?: string };
   };
   if (obj.error?.message) {
     throw new Error(obj.error.message);
   }
-  const content = obj.choices?.[0]?.message?.content;
-  if (typeof content !== 'string' || !content.trim()) {
+  const msg = obj.choices?.[0]?.message;
+  const content =
+    (typeof msg?.content === 'string' && msg.content.trim() && msg.content) ||
+    (typeof msg?.reasoning === 'string' && msg.reasoning.trim() && msg.reasoning) ||
+    '';
+  if (!content.trim()) {
     throw new Error('chat completions: empty assistant content');
   }
   return content;
